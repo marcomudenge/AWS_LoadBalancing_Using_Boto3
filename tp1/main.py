@@ -3,6 +3,7 @@ import time
 import urllib.request
 import uuid
 import os
+import paramiko
 
 import boto3
 from alive_progress import alive_bar
@@ -17,9 +18,9 @@ from elastic_ip import ElasticIpWrapper
 logger = logging.getLogger(__name__)
 console = Console()
 
-AWS_ACCESS_KEY_ID = ''
-AWS_SECRET_ACCESS_KEY = ''
-AWS_SESSION_TOKEN =''
+AWS_ACCESS_KEY_ID = 'ASIAQHVV6K7DVMFOZ6IN'
+AWS_SECRET_ACCESS_KEY = 'HQsomD+0ekDeSSrL/t9K56RKc6QIiua156mdLTMm'
+AWS_SESSION_TOKEN ='IQoJb3JpZ2luX2VjENL//////////wEaCXVzLXdlc3QtMiJIMEYCIQDOScmnAQoo/qCHzWFHurtzikT4t/i+YzG4QnTjDCx9cgIhAMdBTvxzdJXlxmuy/VkY0OWmPAcF2EtfLLh15f41UtXOKrMCCPv//////////wEQABoMMDE2NDg3NzAwNDIzIgyyIXnk49hcLIVRFoIqhwKrRY1gxHAd55UUtfqRDQbko4DUFe13gOe7kvA7ygSsdFE5F3LsVhg4+GonawfBC4Y/GPpHhdv8jIugdzQOV7urgc0sKRJ04tLe9x6sc7NphNT7ziDs5Ab12Cl1jKNat8E7Bn2Do+Yq+b1SzujagHVeI7jJekv4yaCtEtdQB1RqyEMcnxVnTprO2UE3p5VI6tCkNuHFuWIPuLgYFV3379BUkSvj/8YxDFUCr95ErJmfoNrN599kFMh8YroTLCqikJTFucjh/xpRETGTaqos3TPi3fyR9TeSOPvIxsZm7LDTMwYrbxpVwUyxvJoXuamIVsYbr9YUOWeeZyABVM41avLNnrd6+P3dpjDSkJ63BjqcAXPFaGgxv/owQLlqEIGOsgQiRorlK0zWDtge4+y5epCZ00KLhcJw64YCkPoUoOJ4hSftkfAEcSTnMI2h0xsDF1xoA3TNaxYTNGLCS5mQiPrnzl+Huksmj55d9vz86IA7Ew8UezWqpuChfWeTHy00JanvL53Q+VmyZE61hg8k/MnBDCKrEe6kR0iv5EdHxsj8PAs7qsErB3hauuXNJA=='
 
 # TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0a5c3558529277641' # Amazon Linux 2 AMI
@@ -257,10 +258,11 @@ class EC2InstanceScenario:
             console.print(
                 f"\tssh -i {self.key_wrapper.key_file_path} ec2-user@{elastic_ip_address}"
             )
+            
 
-        if not self.remote_exec:
-            console.print("\nOpen a new terminal tab to try the above SSH command.")
-            input("Press Enter to continue...")
+        # if not self.remote_exec:
+        #     console.print("\nOpen a new terminal tab to try the above SSH command.")
+        #     input("Press Enter to continue...")
 
     def associate_elastic_ip(self) -> None:
         """
@@ -335,6 +337,64 @@ class EC2InstanceScenario:
             )
 
         self._display_ssh_info()
+        
+    def get_public_ip(self, instance_id):
+        instance = self.inst_wrapper.ec2_client.describe_instances(
+            InstanceIds=[instance_id]
+            )["Reservations"][0]["Instances"][0]
+        return instance.get("PublicIpAddress")
+
+    def deploy_flask_fastapi(self, instance_id):
+        """
+        Deploys a FastAPI application to the EC2 instance by sending the files over SCP
+        and running the necessary commands to install dependencies and start the server.
+        """
+        console.print("\n**Step x: Deploy FastAPI Application**", style="bold cyan")
+        public_ip = self.get_public_ip(instance_id)
+        scp_command = "scp -i " + self.key_wrapper.key_file_path + " -o StrictHostKeyChecking=no -r ./FastAPI ec2-user@" + public_ip + ":~/"
+        print(scp_command)
+        os.system(scp_command) #TODO: I wasn't able to make it work with sftp paramiko, but should be done with ssm too
+        deploy_flask_commands = [
+            "sudo yum update && sudo yum upgrade -y",
+            "sudo yum install python3 python3-pip -y",
+            "pip3 install Flask fastapi uvicorn",
+            "chmod +x FastAPI/main.py",
+            "python3 FastAPI/main.py"
+        ]
+        public_ip = self.get_public_ip(instance_id)
+        ssh = paramiko.SSHClient() #TODO: Check if possible to use ssm client instead (seems to be blocked)
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        # local_file_path = "./FastAPI/main.py"
+        # remote_file_path = ""
+        try:
+            ssh.connect(
+                hostname=public_ip, 
+                username="ec2-user",
+                key_filename=self.key_wrapper.key_file_path
+            )
+            # send ./FastAPI/main.py to the instance
+            
+            # sftp = ssh.open_sftp()
+            # print(f"Uploading {local_file_path} to {remote_file_path}")
+            # sftp.put(local_file_path, remote_file_path)
+            # print("File upload complete")
+            # sftp.close()
+            
+            for command in deploy_flask_commands:
+                print(f"Executing: {command}")
+                stdin, stdout, stderr = ssh.exec_command(command)
+                exit_status = stdout.channel.recv_exit_status()
+                if exit_status == 0:
+                    print(f"Command succeeded: {command}")
+                else:
+                    print(f"Command failed: {command}, Error: {stderr.read().decode()}")
+                    break
+
+        except paramiko.SSHException as e:
+            print(f"SSH connection failed: {str(e)}")
+        
+        finally:
+            ssh.close()
 
     def cleanup(self) -> None:
         """
@@ -406,6 +466,7 @@ class EC2InstanceScenario:
         self.create_and_list_key_pairs()
         self.create_security_group()
         self.create_instance()
+        self.deploy_flask_fastapi(self.inst_wrapper.instances[0]["InstanceId"])
         
         # TODO: Étapes suivantes
         # self.cleanup()
@@ -415,14 +476,16 @@ class EC2InstanceScenario:
 
 
 if __name__ == "__main__":
+    scenario = EC2InstanceScenario(
+        EC2InstanceWrapper.from_client(),
+        KeyPairWrapper.from_client(),
+        SecurityGroupWrapper.from_client(),
+        ElasticIpWrapper.from_client(),
+        boto3.client("ssm"),
+    )
     try:
-        scenario = EC2InstanceScenario(
-            EC2InstanceWrapper.from_client(),
-            KeyPairWrapper.from_client(),
-            SecurityGroupWrapper.from_client(),
-            ElasticIpWrapper.from_client(),
-            boto3.client("ssm"),
-        )
         scenario.run_scenario()
+        input("Press Enter to continue...")
     except Exception:
         logging.exception("Something went wrong with the demo.")
+    scenario.cleanup()
