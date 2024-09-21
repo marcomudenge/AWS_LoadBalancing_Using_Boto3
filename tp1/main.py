@@ -14,22 +14,28 @@ from instance import EC2InstanceWrapper
 from keypair import KeyPairWrapper
 from security_group import SecurityGroupWrapper
 from elastic_ip import ElasticIpWrapper
+from load_balancer import ElasticLoadBalancerWrapper
 
 logger = logging.getLogger(__name__)
 console = Console()
 
-AWS_ACCESS_KEY_ID = 'ASIAQHVV6K7DVMFOZ6IN'
-AWS_SECRET_ACCESS_KEY = 'HQsomD+0ekDeSSrL/t9K56RKc6QIiua156mdLTMm'
-AWS_SESSION_TOKEN ='IQoJb3JpZ2luX2VjENL//////////wEaCXVzLXdlc3QtMiJIMEYCIQDOScmnAQoo/qCHzWFHurtzikT4t/i+YzG4QnTjDCx9cgIhAMdBTvxzdJXlxmuy/VkY0OWmPAcF2EtfLLh15f41UtXOKrMCCPv//////////wEQABoMMDE2NDg3NzAwNDIzIgyyIXnk49hcLIVRFoIqhwKrRY1gxHAd55UUtfqRDQbko4DUFe13gOe7kvA7ygSsdFE5F3LsVhg4+GonawfBC4Y/GPpHhdv8jIugdzQOV7urgc0sKRJ04tLe9x6sc7NphNT7ziDs5Ab12Cl1jKNat8E7Bn2Do+Yq+b1SzujagHVeI7jJekv4yaCtEtdQB1RqyEMcnxVnTprO2UE3p5VI6tCkNuHFuWIPuLgYFV3379BUkSvj/8YxDFUCr95ErJmfoNrN599kFMh8YroTLCqikJTFucjh/xpRETGTaqos3TPi3fyR9TeSOPvIxsZm7LDTMwYrbxpVwUyxvJoXuamIVsYbr9YUOWeeZyABVM41avLNnrd6+P3dpjDSkJ63BjqcAXPFaGgxv/owQLlqEIGOsgQiRorlK0zWDtge4+y5epCZ00KLhcJw64YCkPoUoOJ4hSftkfAEcSTnMI2h0xsDF1xoA3TNaxYTNGLCS5mQiPrnzl+Huksmj55d9vz86IA7Ew8UezWqpuChfWeTHy00JanvL53Q+VmyZE61hg8k/MnBDCKrEe6kR0iv5EdHxsj8PAs7qsErB3hauuXNJA=='
+AWS_ACCESS_KEY_ID = 'ASIAYGD4W2IMTTDIQR3P'
+AWS_SECRET_ACCESS_KEY = '0IQoPhoiEmrbLsMJ2zqrgCZ85KXZ1JZYRiKVL1ju'
+AWS_SESSION_TOKEN ='IQoJb3JpZ2luX2VjEFUaCXVzLXdlc3QtMiJHMEUCIQCkCbU1RAj2us4WSc48xbRkWIUg5fsWzUrlLaywoZ1zywIgR4dOs7cfhBid+bBcF/eSYskoxIVdx56DkV2PNHkUTOkquwIIjv//////////ARAAGgw1NjI5MDIyNTgyMDEiDIU0uiytXFG/S+LvniqPAjp2Em89fR04guJT3OOCKAAeOGXTK+cACjHd9HptJL5Yt7TPhUyaVVUI3HMl6tP2y4KtacjSpRpU/NKZ0D8LczsthQYdDZVZ0UwnWgGMVurjb3tYEAeiMTqoE4m8ag+IPjSsxInO4G7qaoL/QuH0fqjhTSJTSvZX/zSSO7PUriQRFco3KI1PqUQR+dXB5XjZIg59JBrWv0XGw1xpydhIGDZSxhhbPGz75/Jc9xgMqosQ+IAcQS3KyZpYaBYAYoYNgmu0eFFRUCbsR4TOpgNNZV+mOpfkIYcUaDLNwt+wAuxfLGgYYU9hFsxgBv7JGZoDthN506WzmArnxArlogEicMBUG7wvCWekoUNCfq/8PckwqYS7twY6nQGzLCmrSKUk/PpZaJgBW9ylilS5+snwWQNlNn7s11VqDokm3brw0a6DpwvRCqQdMHCpXITHVBsyc5io4W/x/WganMsUmg+EAviZ68/EtghF1U66nfFBLmerY6QSawZ1m57DaUvU3b6wUWjfCV3Fr9FO2IaJgnQie3eqxUrbrzUo+y6DBg/nBk1CbJbd9mrNsQA2Ef4fG1dEpQYQQgQM'
+
 
 # TODO: S'assurer que les intances sont bien configurées
-INSTANCE_AMI = 'ami-0a5c3558529277641' # Amazon Linux 2 AMI
-INSTANCE_COUNT = 2 # 10 requis
-INSTANCE_TYPE = 't2.micro'
+INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
+INSTANCE_COUNT_1 = 1 # 10 requis
+INSTANCE_COUNT_2 = 1 # 10 requis
+INSTANCE_TYPE_1 = 't2.micro'
+INSTANCE_TYPE_2 = 't2.small'
 
 os.environ['INSTANCE_AMI'] = INSTANCE_AMI
-os.environ['INSTANCE_COUNT'] = str(INSTANCE_COUNT)
-os.environ['INSTANCE_TYPE'] = INSTANCE_TYPE
+os.environ['INSTANCE_COUNT_1'] = str(INSTANCE_COUNT_1)
+os.environ['INSTANCE_COUNT_2'] = str(INSTANCE_COUNT_2)
+os.environ['INSTANCE_TYPE_1'] = INSTANCE_TYPE_1
+os.environ['INSTANCE_TYPE_2'] = INSTANCE_TYPE_2
 
 # TODO: déplacer les var ci-bas dans le fichier de configuration ~/.aws/config et enlever leur référence dans le code
 os.environ['AWS_DEFAULT_REGION'] = "us-east-1"
@@ -52,6 +58,7 @@ class EC2InstanceScenario:
         key_wrapper: KeyPairWrapper,
         sg_wrapper: SecurityGroupWrapper,
         eip_wrapper: ElasticIpWrapper,
+        elb_wrapper: ElasticLoadBalancerWrapper,
         ssm_client: boto3.client,
         remote_exec: bool = False,
     ):
@@ -71,6 +78,7 @@ class EC2InstanceScenario:
         self.key_wrapper = key_wrapper
         self.sg_wrapper = sg_wrapper
         self.eip_wrapper = eip_wrapper
+        self.elb_wrapper = elb_wrapper
         self.ssm_client = ssm_client
         self.remote_exec = remote_exec
 
@@ -155,7 +163,7 @@ class EC2InstanceScenario:
 
         self.sg_wrapper.describe(self.sg_wrapper.security_group)
 
-    def create_instance(self) -> None:
+    def create_instance(self, instance_type) -> None:
         """
         Launches an EC2 instance using an Amazon Linux 2 AMI and the created key pair
         and security group. Displays instance details and SSH connection information.
@@ -172,14 +180,32 @@ class EC2InstanceScenario:
         console.print(
             "Let's create an instance from an Amazon Linux 2 AMI. Here are some options:"
         )
+
+        # Check if the requested AMI is available.
         image_choice = 0
+        if instance_type:
+            for i, image in enumerate(amzn2_images):
+                if image["ImageId"] == instance_type:
+                    console.print(f"- Found requested AMI: {image['ImageId']}")
+                    image_choice = i
+                    break
+        
         console.print(f"- Selected AMI: {amzn2_images[image_choice]['ImageId']}\n")
 
         # Display instance types compatible with the selected AMI
         inst_types = self.inst_wrapper.get_instance_types(
             amzn2_images[image_choice]["Architecture"]
         )
+        
+        # Check if the requested instance type is available.
         inst_type_choice = 0
+        if instance_type:
+            for i, inst_type in enumerate(inst_types):
+                if inst_type["InstanceType"] == instance_type:
+                    console.print(f"- Found requested instance type: {inst_type['InstanceType']}")
+                    inst_type_choice = i
+                    break
+        
         console.print(
             f"- Selected instance type: {inst_types[inst_type_choice]['InstanceType']}\n"
         )
@@ -199,18 +225,25 @@ class EC2InstanceScenario:
         self.inst_wrapper.display()
 
         console.print(
-            "You can use SSH to connect to your instance. "
+            "You can use SSH to oncnect to your instance. "
             "If the connection attempt times out, you might have to manually update "
             "the SSH ingress rule for your IP address in the AWS Management Console."
         )
         self._display_ssh_info()
 
+    def create_instances_group(self, count: 2, instance_type) -> None:
+        """
+        Create multiple instances at once
+        """
+        for i in range(count):
+            self.create_instance(instance_type)
+        
     def _display_ssh_info(self) -> None:
         """
         Displays SSH connection information for the user to connect to the EC2 instance.
         Handles the case where the instance does or does not have an associated public IP address.
         """
-        if (
+        """ if (
             not self.eip_wrapper.elastic_ips
             or not self.eip_wrapper.elastic_ips[0].allocation_id
         ):
@@ -257,17 +290,17 @@ class EC2InstanceScenario:
             elastic_ip_address = elastic_ip.public_ip
             console.print(
                 f"\tssh -i {self.key_wrapper.key_file_path} ec2-user@{elastic_ip_address}"
-            )
+            ) """
             
 
         # if not self.remote_exec:
         #     console.print("\nOpen a new terminal tab to try the above SSH command.")
         #     input("Press Enter to continue...")
 
-    def associate_elastic_ip(self) -> None:
+        """ def associate_elastic_ip(self) -> None:
         """
-        Allocates an Elastic IP address and associates it with the EC2 instance.
-        Displays the Elastic IP address and SSH connection information.
+        # Allocates an Elastic IP address and associates it with the EC2 instance.
+        # Displays the Elastic IP address and SSH connection information.
         """
         console.print("\n**Step 4: Allocate an Elastic IP Address**", style="bold cyan")
         console.print(
@@ -295,13 +328,12 @@ class EC2InstanceScenario:
         console.print(
             "You can now use SSH to connect to your instance by using the Elastic IP."
         )
-        self._display_ssh_info()
+        self._display_ssh_info() """
 
     def stop_and_start_instance(self) -> None:
         """
         Stops and restarts the EC2 instance. Displays instance state and explains
-        changes that occur when the instance is restarted, such as the potential change
-        in the public IP address unless an Elastic IP is associated.
+        changes that occur when the instance is restarted,
         """
         console.print("\n**Step 5: Stop and Start Your Instance**", style="bold cyan")
         console.print("Let's stop and start your instance to see what changes.")
@@ -322,7 +354,7 @@ class EC2InstanceScenario:
         console.print("**Your instance is running.**", style="bold green")
         self.inst_wrapper.display()
 
-        elastic_ip = (
+        """ elastic_ip = (
             self.eip_wrapper.elastic_ips[0] if self.eip_wrapper.elastic_ips else None
         )
 
@@ -334,7 +366,7 @@ class EC2InstanceScenario:
             console.print(
                 f"Because you have associated an Elastic IP with your instance, you can \n"
                 f"connect by using a consistent IP address after the instance restarts: {elastic_ip.public_ip}"
-            )
+            ) """
 
         self._display_ssh_info()
         
@@ -396,6 +428,55 @@ class EC2InstanceScenario:
         finally:
             ssh.close()
 
+    def create_load_balancer(self) -> None:
+        """
+        Creates a load balancer that distributes incoming traffic across multiple targets.
+        """
+        # Get VPC
+        vpc_id = self.inst_wrapper.instances[0]["VpcId"]
+
+        # Create two target groups for the load balancer.
+        target_group_1 = self.elb_wrapper.create_target_group(target_group_name = f"TargetGroup1-{uuid.uuid4().hex[:8]}", protocol='HTTP', port=80, vpc_id=vpc_id)
+
+        console.print("\n**Step 5: Create a Load Balancer**", style="bold cyan")
+        console.print("Creating a load balancer to distribute incoming traffic...")
+
+        # Create a load balancer and simulate the process with a progress bar.
+        with alive_bar(1, title="Creating Load Balancer") as bar:
+            self.elb_wrapper.create(self.sg_wrapper.security_group)
+            time.sleep(1)
+            bar()
+
+        console.print(f"- **Load Balancer Name**: {self.elb_wrapper.load_balancer['LoadBalancerName']}")
+        console.print(f"- **DNS Name**: {self.elb_wrapper.load_balancer['DNSName']}")
+
+        console.print("\n**Load Balancer Configuration**:")
+        console.print(f"- **Security Group**: {self.sg_wrapper.security_group}")
+        console.print(f"- **Subnets**: {self.elb_wrapper.load_balancer['AvailabilityZones']}")
+
+        console.print("\n**Load Balancer Listener Configuration**:")
+        console.print(
+            f"- **Protocol**: {self.elb_wrapper.listener['Protocol']}\n"
+            f"- **Port**: {self.elb_wrapper.listener['LoadBalancerPort']}\n"
+            f"- **Instance Protocol**: {self.elb_wrapper.listener['InstanceProtocol']}\n"
+            f"- **Instance Port**: {self.elb_wrapper.listener['InstancePort']}"
+        )
+
+        """ console.print("\n**Load Balancer Health Check Configuration**:")
+        console.print(
+            f"- **Target**: {self.elb_wrapper.health_check['Target']}\n"
+            f"- **Interval**: {self.elb_wrapper.health_check['Interval']} seconds\n"
+            f"- **Timeout**: {self.elb_wrapper.health_check['Timeout']} seconds\n"
+            f"- **Healthy Threshold**: {self.elb_wrapper.health_check['HealthyThreshold']}\n"
+            f"- **Unhealthy Threshold**: {self.elb_wrapper.health_check['UnhealthyThreshold']}"
+        )
+
+        console.print("\n**Load Balancer Attributes**:")
+        console.print(
+            f"- **Cross-Zone Load Balancing**: {self.elb_wrapper.attributes['CrossZoneLoadBalancing']}\n"
+            f"- **Connection Draining**: {self.elb_wrapper.attributes['ConnectionDraining']}\n"
+            f"- **Connection Draining Timeout**: {self.elb_wrapper.attributes['ConnectionDrainingTimeout']}" """
+
     def cleanup(self) -> None:
         """
         Cleans up all the resources created during the scenario, including disassociating
@@ -405,6 +486,7 @@ class EC2InstanceScenario:
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
 
+        """         
         for elastic_ip in self.eip_wrapper.elastic_ips:
             console.print(f"- **Elastic IP**: {elastic_ip.public_ip}")
 
@@ -420,16 +502,18 @@ class EC2InstanceScenario:
                 time.sleep(1)
                 bar()
 
-            console.print("\t- **Released Elastic IP**")
+            console.print("\t- **Released Elastic IP**") """
 
-        console.print(f"- **Instance**: {self.inst_wrapper.instances[0]['InstanceId']}")
 
-        with alive_bar(1, title="Terminating Instance") as bar:
-            self.inst_wrapper.terminate()
-            time.sleep(380)
-            bar()
+        console.print(f"- **Instances count**: {len(self.inst_wrapper.instances)}")
 
-        console.print("\t- **Terminated Instance**")
+        for instance in self.inst_wrapper.instances:
+            with alive_bar(1, title="Terminating Instance") as bar:
+                self.inst_wrapper.terminate()
+                time.sleep(380)
+                bar()
+
+            console.print("\t- **Terminated Instance with ID: {instance['InstanceId']}**")
 
         console.print(f"- **Security Group**: {self.sg_wrapper.security_group}")
 
@@ -452,7 +536,7 @@ class EC2InstanceScenario:
     def run_scenario(self) -> None:
         """
         Executes the entire EC2 instance scenario: creates key pairs, security groups,
-        launches an instance, associates an Elastic IP, and cleans up all resources.
+        launches an instance and cleans up all resources.
         """
         logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -462,11 +546,14 @@ class EC2InstanceScenario:
             style="bold magenta",
         )
         console.print("-" * 88)
-
+        # Create load balancer
+        
         self.create_and_list_key_pairs()
         self.create_security_group()
-        self.create_instance()
+        self.create_instances_group(INSTANCE_COUNT_1, INSTANCE_TYPE_1)
+        #self.create_instances_group(INSTANCE_COUNT_2, INSTANCE_TYPE_2)
         self.deploy_flask_fastapi(self.inst_wrapper.instances[0]["InstanceId"])
+        #self.create_load_balancer()
         
         # TODO: Étapes suivantes
         # self.cleanup()
@@ -481,11 +568,13 @@ if __name__ == "__main__":
         KeyPairWrapper.from_client(),
         SecurityGroupWrapper.from_client(),
         ElasticIpWrapper.from_client(),
+        ElasticLoadBalancerWrapper(boto3.client("elbv2")),
         boto3.client("ssm"),
     )
     try:
         scenario.run_scenario()
         input("Press Enter to continue...")
+        scenario.cleanup()
     except Exception:
         logging.exception("Something went wrong with the demo.")
-    scenario.cleanup()
+        scenario.cleanup()
