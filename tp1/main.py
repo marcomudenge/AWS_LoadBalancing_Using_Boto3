@@ -13,15 +13,14 @@ from rich.console import Console
 from instance import EC2InstanceWrapper
 from keypair import KeyPairWrapper
 from security_group import SecurityGroupWrapper
-from elastic_ip import ElasticIpWrapper
 from load_balancer import ElasticLoadBalancerWrapper
 
 logger = logging.getLogger(__name__)
 console = Console()
 
-AWS_ACCESS_KEY_ID = 'ASIAYGD4W2IMTTDIQR3P'
-AWS_SECRET_ACCESS_KEY = '0IQoPhoiEmrbLsMJ2zqrgCZ85KXZ1JZYRiKVL1ju'
-AWS_SESSION_TOKEN ='IQoJb3JpZ2luX2VjEFUaCXVzLXdlc3QtMiJHMEUCIQCkCbU1RAj2us4WSc48xbRkWIUg5fsWzUrlLaywoZ1zywIgR4dOs7cfhBid+bBcF/eSYskoxIVdx56DkV2PNHkUTOkquwIIjv//////////ARAAGgw1NjI5MDIyNTgyMDEiDIU0uiytXFG/S+LvniqPAjp2Em89fR04guJT3OOCKAAeOGXTK+cACjHd9HptJL5Yt7TPhUyaVVUI3HMl6tP2y4KtacjSpRpU/NKZ0D8LczsthQYdDZVZ0UwnWgGMVurjb3tYEAeiMTqoE4m8ag+IPjSsxInO4G7qaoL/QuH0fqjhTSJTSvZX/zSSO7PUriQRFco3KI1PqUQR+dXB5XjZIg59JBrWv0XGw1xpydhIGDZSxhhbPGz75/Jc9xgMqosQ+IAcQS3KyZpYaBYAYoYNgmu0eFFRUCbsR4TOpgNNZV+mOpfkIYcUaDLNwt+wAuxfLGgYYU9hFsxgBv7JGZoDthN506WzmArnxArlogEicMBUG7wvCWekoUNCfq/8PckwqYS7twY6nQGzLCmrSKUk/PpZaJgBW9ylilS5+snwWQNlNn7s11VqDokm3brw0a6DpwvRCqQdMHCpXITHVBsyc5io4W/x/WganMsUmg+EAviZ68/EtghF1U66nfFBLmerY6QSawZ1m57DaUvU3b6wUWjfCV3Fr9FO2IaJgnQie3eqxUrbrzUo+y6DBg/nBk1CbJbd9mrNsQA2Ef4fG1dEpQYQQgQM'
+AWS_ACCESS_KEY_ID = 'ASIAQHVV6K7D2YZH7ZZD'
+AWS_SECRET_ACCESS_KEY = 'yCGkQ4z6ml0GkM1sK1amEj+xlL3Spn8zdMqd4rKh'
+AWS_SESSION_TOKEN ='IQoJb3JpZ2luX2VjEFkaCXVzLXdlc3QtMiJHMEUCIQCbYWaef5Z3M55YXKzqVIhM9UNqd6WXC/Ap73wXxcqmvAIgIxNRNWPC4W5xgdoSaSzIsJLV3fjgS8+pYZdLOEhpE1YqswIIkv//////////ARAAGgwwMTY0ODc3MDA0MjMiDMiYpHiw1HLaoJ69wiqHAt2M4KqZjzO+bxaR3Zz2+yaQT+uQxfsKIzQRLaS5S45lxvxmMXn3Uch6FvAE1OXLVTko6vnK3e906lrhWS4sOKFTQwIrloqwwts1SKtKI6oG3Sku9af+inwUfQyFCZ0Ij5TmnlVqBmdGFyUGDGeYhqhszUrzzG3HKVppuwCNX8vtW2PMv5veHUtVeNEWC42c72OsApgQ62dKh9jU8Me8VXxl57XvzPBkDLKAgmFBu5uYBjQYWUeccXIfnH9uCV7IR+WoWWgA7TcW/4770nPpAAB4HhJjKweYhFZy0X8LZBC7738DpBXaomjCYlqXVao+5JXbPaSCMEy4H0d36BoxFF0fo8RrFo31MKvyu7cGOp0BM9+pkc7ipxkMYeU3I5ApmVtcCRMExqXdQwQdtO9wcxyg4bvgk1sV/EqjUW77hWJ+yVX/XsPYR3nZ1iEANHKKbNZrjaB2js2pr8g9NgRSVA9bL7/xC5PFSMA7WV8UrfN4CE1xOkvX+SD4KY44MdhjoJ1Zs9vR7KfJtEfT1EQq0mtcjbDbpyGAxMvOYl3mSFre4VtlY/df0ZTR/YI60A=='
 
 
 # TODO: S'assurer que les intances sont bien configurées
@@ -29,7 +28,7 @@ INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
 INSTANCE_COUNT_1 = 1 # 10 requis
 INSTANCE_COUNT_2 = 1 # 10 requis
 INSTANCE_TYPE_1 = 't2.micro'
-INSTANCE_TYPE_2 = 't2.small'
+INSTANCE_TYPE_2 = 't2.large'
 
 os.environ['INSTANCE_AMI'] = INSTANCE_AMI
 os.environ['INSTANCE_COUNT_1'] = str(INSTANCE_COUNT_1)
@@ -57,7 +56,6 @@ class EC2InstanceScenario:
         inst_wrapper: EC2InstanceWrapper,
         key_wrapper: KeyPairWrapper,
         sg_wrapper: SecurityGroupWrapper,
-        eip_wrapper: ElasticIpWrapper,
         elb_wrapper: ElasticLoadBalancerWrapper,
         ssm_client: boto3.client,
         remote_exec: bool = False,
@@ -77,7 +75,6 @@ class EC2InstanceScenario:
         self.inst_wrapper = inst_wrapper
         self.key_wrapper = key_wrapper
         self.sg_wrapper = sg_wrapper
-        self.eip_wrapper = eip_wrapper
         self.elb_wrapper = elb_wrapper
         self.ssm_client = ssm_client
         self.remote_exec = remote_exec
@@ -165,56 +162,46 @@ class EC2InstanceScenario:
 
     def create_instance(self, instance_type) -> None:
         """
-        Launches an EC2 instance using an Amazon Linux 2 AMI and the created key pair
+        Launches an EC2 instance using an specific AMI and the created key pair
         and security group. Displays instance details and SSH connection information.
         """
         # Retrieve Amazon Linux 2 AMIs from SSM.
-        ami_paginator = self.ssm_client.get_paginator("get_parameters_by_path")
-        ami_options = []
-        for page in ami_paginator.paginate(Path="/aws/service/ami-amazon-linux-latest"):
-            ami_options += page["Parameters"]
-        amzn2_images = self.inst_wrapper.get_images(
-            [opt["Value"] for opt in ami_options if "amzn2" in opt["Name"]]
-        )
+        # ami_paginator = self.ssm_client.get_paginator("get_parameters_by_path")
+        # ami_options = []
+        # for page in ami_paginator.paginate(Path="/aws/service/ami-amazon-linux-latest"):
+        #     ami_options += page["Parameters"]
+        # amzn2_images = self.inst_wrapper.get_images(
+        #     [opt["Value"] for opt in ami_options if "amzn2" in opt["Name"]]
+        # )
         console.print("\n**Step 3: Launch Your Instance**", style="bold cyan")
         console.print(
-            "Let's create an instance from an Amazon Linux 2 AMI. Here are some options:"
+            "Let's create an instance from a specified AMI: {}".format(INSTANCE_AMI)
         )
 
-        # Check if the requested AMI is available.
-        image_choice = 0
-        if instance_type:
-            for i, image in enumerate(amzn2_images):
-                if image["ImageId"] == instance_type:
-                    console.print(f"- Found requested AMI: {image['ImageId']}")
-                    image_choice = i
-                    break
-        
-        console.print(f"- Selected AMI: {amzn2_images[image_choice]['ImageId']}\n")
+        # Display instance types compatible with the specified AMI
+        inst_types = self.inst_wrapper.get_instance_types("x86_64")  # Adjust architecture as needed
 
-        # Display instance types compatible with the selected AMI
-        inst_types = self.inst_wrapper.get_instance_types(
-            amzn2_images[image_choice]["Architecture"]
-        )
-        
         # Check if the requested instance type is available.
-        inst_type_choice = 0
-        if instance_type:
-            for i, inst_type in enumerate(inst_types):
-                if inst_type["InstanceType"] == instance_type:
-                    console.print(f"- Found requested instance type: {inst_type['InstanceType']}")
-                    inst_type_choice = i
-                    break
+        inst_type_choice = None
+        for inst_type in inst_types:
+            if inst_type["InstanceType"] == instance_type:
+                console.print(f"- Found requested instance type: {inst_type['InstanceType']}")
+                inst_type_choice = inst_type
+                break
         
+        if inst_type_choice is None:
+            console.print(f"- Requested instance type '{instance_type}' not found.")
+            return
+
         console.print(
-            f"- Selected instance type: {inst_types[inst_type_choice]['InstanceType']}\n"
+            f"- Selected instance type: {inst_type_choice['InstanceType']}\n"
         )
 
         console.print("Creating your instance and waiting for it to start...")
         with alive_bar(1, title="Creating Instance") as bar:
             self.inst_wrapper.create(
-                amzn2_images[image_choice]["ImageId"],
-                inst_types[inst_type_choice]["InstanceType"],
+                INSTANCE_AMI,
+                inst_type_choice["InstanceType"],
                 self.key_wrapper.key_pair["KeyName"],
                 [self.sg_wrapper.security_group],
             )
@@ -243,132 +230,40 @@ class EC2InstanceScenario:
         Displays SSH connection information for the user to connect to the EC2 instance.
         Handles the case where the instance does or does not have an associated public IP address.
         """
-        """ if (
-            not self.eip_wrapper.elastic_ips
-            or not self.eip_wrapper.elastic_ips[0].allocation_id
-        ):
-            if self.inst_wrapper.instances:
-                instance = self.inst_wrapper.instances[0]
-                instance_id = instance["InstanceId"]
+        if self.inst_wrapper.instances:
+            instance = self.inst_wrapper.instances[0]
+            instance_id = instance["InstanceId"]
 
-                waiter = self.inst_wrapper.ec2_client.get_waiter("instance_running")
+            waiter = self.inst_wrapper.ec2_client.get_waiter("instance_running")
+            console.print(
+                "Waiting for the instance to be in a running state with a public IP...",
+                style="bold cyan",
+            )
+
+            with alive_bar(1, title="Waiting for Instance to Start") as bar:
+                waiter.wait(InstanceIds=[instance_id])
+                time.sleep(20)
+                bar()
+
+            public_ip = self.get_public_ip(instance_id)
+            if public_ip:
                 console.print(
-                    "Waiting for the instance to be in a running state with a public IP...",
+                    "\nTo connect via SSH, open another command prompt and run the following command:",
                     style="bold cyan",
                 )
-
-                with alive_bar(1, title="Waiting for Instance to Start") as bar:
-                    waiter.wait(InstanceIds=[instance_id])
-                    time.sleep(20)
-                    bar()
-
-                instance = self.inst_wrapper.ec2_client.describe_instances(
-                    InstanceIds=[instance_id]
-                )["Reservations"][0]["Instances"][0]
-
-                public_ip = instance.get("PublicIpAddress")
-                if public_ip:
-                    console.print(
-                        "\nTo connect via SSH, open another command prompt and run the following command:",
-                        style="bold cyan",
-                    )
-                    console.print(
-                        f"\tssh -i {self.key_wrapper.key_file_path} ec2-user@{public_ip}"
-                    )
-                else:
-                    console.print(
-                        "Instance does not have a public IP address assigned.",
-                        style="bold red",
-                    )
+                console.print(
+                    f"\tssh -i {self.key_wrapper.key_file_path} ec2-user@{public_ip}"
+                )
             else:
                 console.print(
-                    "No instance available to retrieve public IP address.",
+                    "Instance does not have a public IP address assigned.",
                     style="bold red",
                 )
         else:
-            elastic_ip = self.eip_wrapper.elastic_ips[0]
-            elastic_ip_address = elastic_ip.public_ip
             console.print(
-                f"\tssh -i {self.key_wrapper.key_file_path} ec2-user@{elastic_ip_address}"
-            ) """
-            
-
-        # if not self.remote_exec:
-        #     console.print("\nOpen a new terminal tab to try the above SSH command.")
-        #     input("Press Enter to continue...")
-
-        """ def associate_elastic_ip(self) -> None:
-        """
-        # Allocates an Elastic IP address and associates it with the EC2 instance.
-        # Displays the Elastic IP address and SSH connection information.
-        """
-        console.print("\n**Step 4: Allocate an Elastic IP Address**", style="bold cyan")
-        console.print(
-            "You can allocate an Elastic IP address and associate it with your instance\n"
-            "to keep a consistent IP address even when your instance restarts."
-        )
-
-        with alive_bar(1, title="Allocating Elastic IP") as bar:
-            elastic_ip = self.eip_wrapper.allocate()
-            time.sleep(0.5)
-            bar()
-
-        console.print(
-            f"- **Allocated Static Elastic IP Address**: {elastic_ip.public_ip}."
-        )
-
-        with alive_bar(1, title="Associating Elastic IP") as bar:
-            self.eip_wrapper.associate(
-                elastic_ip.allocation_id, self.inst_wrapper.instances[0]["InstanceId"]
+                "No instance available to retrieve public IP address.",
+                style="bold red",
             )
-            time.sleep(2)
-            bar()
-
-        console.print(f"- **Associated Elastic IP with Your Instance**.")
-        console.print(
-            "You can now use SSH to connect to your instance by using the Elastic IP."
-        )
-        self._display_ssh_info() """
-
-    def stop_and_start_instance(self) -> None:
-        """
-        Stops and restarts the EC2 instance. Displays instance state and explains
-        changes that occur when the instance is restarted,
-        """
-        console.print("\n**Step 5: Stop and Start Your Instance**", style="bold cyan")
-        console.print("Let's stop and start your instance to see what changes.")
-        console.print("- **Stopping your instance and waiting until it's stopped...**")
-
-        with alive_bar(1, title="Stopping Instance") as bar:
-            self.inst_wrapper.stop()
-            time.sleep(360)
-            bar()
-
-        console.print("- **Your instance is stopped. Restarting...**")
-
-        with alive_bar(1, title="Starting Instance") as bar:
-            self.inst_wrapper.start()
-            time.sleep(20)
-            bar()
-
-        console.print("**Your instance is running.**", style="bold green")
-        self.inst_wrapper.display()
-
-        """ elastic_ip = (
-            self.eip_wrapper.elastic_ips[0] if self.eip_wrapper.elastic_ips else None
-        )
-
-        if elastic_ip is None or elastic_ip.allocation_id is None:
-            console.print(
-                "- **Note**: Every time your instance is restarted, its public IP address changes."
-            )
-        else:
-            console.print(
-                f"Because you have associated an Elastic IP with your instance, you can \n"
-                f"connect by using a consistent IP address after the instance restarts: {elastic_ip.public_ip}"
-            ) """
-
-        self._display_ssh_info()
         
     def get_public_ip(self, instance_id):
         instance = self.inst_wrapper.ec2_client.describe_instances(
@@ -391,7 +286,7 @@ class EC2InstanceScenario:
             "sudo yum install python3 python3-pip -y",
             "pip3 install Flask fastapi uvicorn",
             "chmod +x FastAPI/main.py",
-            "python3 FastAPI/main.py"
+            "python3 FastAPI/main.py > output.log 2>&1 &"
         ]
         public_ip = self.get_public_ip(instance_id)
         ssh = paramiko.SSHClient() #TODO: Check if possible to use ssm client instead (seems to be blocked)
@@ -486,25 +381,6 @@ class EC2InstanceScenario:
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
 
-        """         
-        for elastic_ip in self.eip_wrapper.elastic_ips:
-            console.print(f"- **Elastic IP**: {elastic_ip.public_ip}")
-
-            with alive_bar(1, title="Disassociating Elastic IP") as bar:
-                self.eip_wrapper.disassociate(elastic_ip.allocation_id)
-                time.sleep(2)
-                bar()
-
-            console.print("\t- **Disassociated Elastic IP from the Instance**")
-
-            with alive_bar(1, title="Releasing Elastic IP") as bar:
-                self.eip_wrapper.release(elastic_ip.allocation_id)
-                time.sleep(1)
-                bar()
-
-            console.print("\t- **Released Elastic IP**") """
-
-
         console.print(f"- **Instances count**: {len(self.inst_wrapper.instances)}")
 
         for instance in self.inst_wrapper.instances:
@@ -567,7 +443,6 @@ if __name__ == "__main__":
         EC2InstanceWrapper.from_client(),
         KeyPairWrapper.from_client(),
         SecurityGroupWrapper.from_client(),
-        ElasticIpWrapper.from_client(),
         ElasticLoadBalancerWrapper(boto3.client("elbv2")),
         boto3.client("ssm"),
     )
