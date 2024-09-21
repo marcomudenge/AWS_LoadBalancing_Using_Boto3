@@ -61,12 +61,12 @@ class SecurityGroupWrapper:
         else:
             return self.security_group
 
-    def authorize_ingress(self, ssh_ingress_ip: str) -> Optional[Dict[str, Any]]:
+    def authorize_ingress(self, ingress_ip: str) -> Optional[Dict[str, Any]]:
         """
         Adds a rule to the security group to allow access to SSH.
 
-        :param ssh_ingress_ip: The IP address that is granted inbound access to connect
-                               to port 22 over TCP, used for SSH.
+        :param ingress_ip: The IP address that is granted inbound access to connect
+                               to port 22 over TCP, used for SSH and port 8000 for web server.
         :return: The response to the authorization request. The 'Return' field of the
                  response indicates whether the request succeeded or failed, or None if no security group is set.
         :raise Handles AWS SDK service-level ClientError, with special handling for ResourceAlreadyExists
@@ -82,7 +82,14 @@ class SecurityGroupWrapper:
                     "IpProtocol": "tcp",
                     "FromPort": 22,
                     "ToPort": 22,
-                    "IpRanges": [{"CidrIp": f"{ssh_ingress_ip}/32"}],
+                    "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
+                },
+                {
+                # Web server ingress open to the specified IP address.
+                "IpProtocol": "tcp",
+                "FromPort": 8000,
+                "ToPort": 8000,
+                "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
                 }
             ]
             response = self.ec2_client.authorize_security_group_ingress(
@@ -91,8 +98,7 @@ class SecurityGroupWrapper:
         except ClientError as err:
             if err.response["Error"]["Code"] == "InvalidPermission.Duplicate":
                 logger.error(
-                    f"The SSH ingress rule for IP {ssh_ingress_ip} already exists"
-                    f"in security group '{self.security_group}'."
+                    f"Security group '{self.security_group}' already has the specified rule."
                 )
             raise
         else:
