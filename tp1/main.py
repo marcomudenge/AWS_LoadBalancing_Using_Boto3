@@ -20,10 +20,10 @@ from cloudwatch import CloudWatchWrapper
 logger = logging.getLogger(__name__)
 console = Console()
 
-AWS_ACCESS_KEY_ID = 'ASIAQHVV6K7D2YZH7ZZD'
-AWS_SECRET_ACCESS_KEY = 'yCGkQ4z6ml0GkM1sK1amEj+xlL3Spn8zdMqd4rKh'
-AWS_SESSION_TOKEN ='IQoJb3JpZ2luX2VjEFkaCXVzLXdlc3QtMiJHMEUCIQCbYWaef5Z3M55YXKzqVIhM9UNqd6WXC/Ap73wXxcqmvAIgIxNRNWPC4W5xgdoSaSzIsJLV3fjgS8+pYZdLOEhpE1YqswIIkv//////////ARAAGgwwMTY0ODc3MDA0MjMiDMiYpHiw1HLaoJ69wiqHAt2M4KqZjzO+bxaR3Zz2+yaQT+uQxfsKIzQRLaS5S45lxvxmMXn3Uch6FvAE1OXLVTko6vnK3e906lrhWS4sOKFTQwIrloqwwts1SKtKI6oG3Sku9af+inwUfQyFCZ0Ij5TmnlVqBmdGFyUGDGeYhqhszUrzzG3HKVppuwCNX8vtW2PMv5veHUtVeNEWC42c72OsApgQ62dKh9jU8Me8VXxl57XvzPBkDLKAgmFBu5uYBjQYWUeccXIfnH9uCV7IR+WoWWgA7TcW/4770nPpAAB4HhJjKweYhFZy0X8LZBC7738DpBXaomjCYlqXVao+5JXbPaSCMEy4H0d36BoxFF0fo8RrFo31MKvyu7cGOp0BM9+pkc7ipxkMYeU3I5ApmVtcCRMExqXdQwQdtO9wcxyg4bvgk1sV/EqjUW77hWJ+yVX/XsPYR3nZ1iEANHKKbNZrjaB2js2pr8g9NgRSVA9bL7/xC5PFSMA7WV8UrfN4CE1xOkvX+SD4KY44MdhjoJ1Zs9vR7KfJtEfT1EQq0mtcjbDbpyGAxMvOYl3mSFre4VtlY/df0ZTR/YI60A=='
 
+AWS_ACCESS_KEY_ID='ASIAYGD4W2IMQF5B35LD'
+AWS_SECRET_ACCESS_KEY='0qnZHKWbqfJRFJZKUqq4SY2pKSW0qyD97/1138IX'
+AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEG4aCXVzLXdlc3QtMiJHMEUCIB4U4Otm2cJZGCtM0+uXGXi84qHkNmA7nCH+x0aHM8jmAiEAlIbgwc54m8bunpY53M497WNfxgdGaZmJnsYcNrhOydoquwIIp///////////ARAAGgw1NjI5MDIyNTgyMDEiDOolBXbb1Lc/t+nCESqPAklEWOsCZ7FrzErT0+G7ff0fEcrDnSagofm101Pi3keu073PXPpIUPu/uQ6YEUbFkvuGdOWRisK5SZ2Y+welU2CUBFd2r/RqZiJnJo8BfjAHOY8u4QPippVourJj6QTpyphRXq4astd6/rs2R/aoTYhJH7oJUek+0PKQk0dik3cjfkj5NPFaPGoYoPJMhLKmXJeJAjNIqGAuMjCUttt6U9BN0A3qGbiGxJpIH9wIdt29gx1WXEg8nenK+UgOr6ohTrR7hm8Nr6ARR8b0RgfCthniXFTfS4F4VCg+9tsACYKRq5YghTDvIVrwc8B25q1NUDYXzaExL13IVHsvS+lE6Y6j2IkC1Svvo3PLuWfw+3kwi7jAtwY6nQHGvAKPTz5qkM4fWIe+bR2tkQryBQLSEmshr+0Jywcd164x88lRcX/hR4xj5+CFzuAjlbgyx1Wx8yeq9nd5z3dW1QqmMXGAe1fr31aG/8LROmW+SV2gORembSfQ/3IM36R1advsInWXvUyVzOrfxB1MpiYnUSSQ4EipEkfLyYX9uiiNFiZtJHcFUB5wey2tXTs+FBnlV7jsUS7Omc5N'
 
 # TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
@@ -61,7 +61,8 @@ class EC2InstanceScenario:
         elb_wrapper: ElasticLoadBalancerWrapper,
         cloudwatch_wrapper: CloudWatchWrapper,
         ssm_client: boto3.client,
-        remote_exec: bool = False,
+        elbv2_client: boto3.client,
+        remote_exec: bool = False
     ):
         """
         Initializes the EC2InstanceScenario with the necessary AWS service wrappers.
@@ -82,6 +83,7 @@ class EC2InstanceScenario:
         self.cloudwatch_wrapper = cloudwatch_wrapper
         self.ssm_client = ssm_client
         self.remote_exec = remote_exec
+        self.elbv2_client = elbv2_client
 
     def create_and_list_key_pairs(self) -> None:
         """
@@ -222,7 +224,7 @@ class EC2InstanceScenario:
         )
         self._display_ssh_info()
 
-    def create_instances_group(self, count: 2, instance_type) -> None:
+    def create_instances_group(self, count, instance_type) -> None:
         """
         Create multiple instances at once
         """
@@ -350,6 +352,24 @@ class EC2InstanceScenario:
             for data_point in stats['Datapoints']:
                 print(f"Instance ID: {instance_id}, Timestamp: {data_point['Timestamp']}, CPU Utilization: {data_point['Average']}")
 
+    def create_target_group(self, name, protocol = 'HTTP', port = '8000', vpc_id = None, target_type = 'instance') -> dict:
+        try:
+            response = self.elbv2_client.create_target_group(
+                Name=name,
+                Protocol=protocol,
+                Port=port,
+                VpcId=vpc_id,
+                HealthCheckProtocol='HTTP',
+                HealthCheckPort='8000',
+                HealthCheckPath='/',
+                TargetType=target_type
+                )
+            target_group = response['TargetGroups'][0]
+            console.print(f"Created target group: {target_group['TargetGroupArn']}")
+            return target_group
+        except Exception as e:
+            console.print(f"An error occurred while creating target group: {str(e)}", style="bold red")
+  
     def create_load_balancer(self) -> None:
         """
         Creates a load balancer that distributes incoming traffic across multiple targets.
@@ -358,46 +378,121 @@ class EC2InstanceScenario:
         vpc_id = self.inst_wrapper.instances[0]["VpcId"]
 
         # Create two target groups for the load balancer.
-        target_group_1 = self.elb_wrapper.create_target_group(target_group_name = f"TargetGroup1-{uuid.uuid4().hex[:8]}", protocol='HTTP', port=80, vpc_id=vpc_id)
+        #target_group_1 = self.elb_wrapper.create_target_group(target_group_name = f"TargetGroup1-{uuid.uuid4().hex[:8]}", protocol='HTTP', port=80, vpc_id=vpc_id)
 
         console.print("\n**Step 5: Create a Load Balancer**", style="bold cyan")
         console.print("Creating a load balancer to distribute incoming traffic...")
 
         # Create a load balancer and simulate the process with a progress bar.
         with alive_bar(1, title="Creating Load Balancer") as bar:
-            self.elb_wrapper.create(self.sg_wrapper.security_group)
+            subnets = self.get_subnets(vpc_id)
+            
+            load_balancer_name = f"LoadBalancer-{uuid.uuid4().hex[:8]}"
+            self.elb_wrapper.create_load_balancer(
+                load_balancer_name, [subnet["SubnetId"] for subnet in subnets]
+            )
+
+            target_group_1 = self.create_target_group(
+                name=f"TargetGroup1-{uuid.uuid4().hex[:8]}", 
+                protocol='HTTP', 
+                port=80, 
+                vpc_id=vpc_id,
+                target_type='instance'
+            )
+            # Register the instance with the target group
+            self.elbv2_client.register_targets(
+                TargetGroupArn=target_group_1['TargetGroupArn'],
+                Targets=[{'Id': self.inst_wrapper.instances[0]['InstanceId'],
+                            'Port': 80
+                            }]
+                )
+            console.print(f"Instance {self.inst_wrapper.instances[0]['InstanceId']} registered with target group {target_group_1['TargetGroupArn']}.")
+            
+            target_group_2 = self.create_target_group(
+                name=f"TargetGroup2-{uuid.uuid4().hex[:8]}", 
+                protocol='HTTP', 
+                port=81, 
+                vpc_id=vpc_id,
+                target_type='instance'
+                )
+            
+            # Register the instance with the target group
+            self.elbv2_client.register_targets(
+                TargetGroupArn=target_group_2['TargetGroupArn'],
+                Targets=[{'Id': self.inst_wrapper.instances[1]['InstanceId'],
+                            'Port': 81
+                            }]
+                )
+            console.print(f"Instance {self.inst_wrapper.instances[1]['InstanceId']} registered with target group {target_group_2['TargetGroupArn']}.")
+
+            self.elb_wrapper.create_listener(load_balancer_name, target_group_1)
+            self.elb_wrapper.create_listener(load_balancer_name, target_group_2)
+
+            logging.info("Verifying access to the load balancer endpoint.")
+            endpoint = self.elb_wrapper.get_endpoint(load_balancer_name)
+            lb_success = self.elb_wrapper.verify_load_balancer_endpoint(endpoint)
+            if lb_success:
+                logging.info("Load balancer endpoint is accessible.")
+            else:
+                logging.error("Load balancer endpoint is not accessible.")
             time.sleep(1)
             bar()
+        
+    def register_targets(self, target_group_arn: str, instance_id: str) -> None:
+        """
+        Registers an instance as a target with the specified target group.
 
-        console.print(f"- **Load Balancer Name**: {self.elb_wrapper.load_balancer['LoadBalancerName']}")
-        console.print(f"- **DNS Name**: {self.elb_wrapper.load_balancer['DNSName']}")
+        :param target_group_arn: The ARN of the target group to register the instance with.
+        :param instance_id: The ID of the instance to register as a target.
+        """
+        try:
+            response = self.elb_wrapper.elb_client.register_targets(target_group_arn, [instance_id])
+            if response and response.get("ResponseMetadata"):
+                console.print(
+                    f"Instance {instance_id} registered as a target with target group {target_group_arn}."
+                )
+            else:
+                console.print(
+                    f"Failed to register instance {instance_id} with target group {target_group_arn}.",
+                    style="bold red",
+                )
+        except:
+            console.print(
+                f"An error occurred while registering instance {instance_id} with target group {target_group_arn}.",
+                style="bold red")
+            
+    
+    def get_subnets(self, vpc_id: str, zones: list[str] = ['us-east-1b', 'us-east-1a']) -> list[dict[str, any]]:
+        """
+        Gets the default subnets in a VPC for a specified list of Availability Zones.
 
-        console.print("\n**Load Balancer Configuration**:")
-        console.print(f"- **Security Group**: {self.sg_wrapper.security_group}")
-        console.print(f"- **Subnets**: {self.elb_wrapper.load_balancer['AvailabilityZones']}")
+        :param vpc_id: The ID of the VPC to look up.
+        :param zones: The list of Availability Zones to look up.
+        :return: The list of subnets found.
+        """
+        # Ensure that 'zones' is a list, even if None is passed
+        if zones is None:
+            zones = []
+        try:
+            client = boto3.client("ec2")
+            paginator = client.get_paginator("describe_subnets")
+            page_iterator = paginator.paginate(
+                Filters=[
+                    {"Name": "vpc-id", "Values": [vpc_id]},
+                    {"Name": "availability-zone", "Values": zones},
+                    {"Name": "default-for-az", "Values": ["true"]},
+                ]
+            )
 
-        console.print("\n**Load Balancer Listener Configuration**:")
-        console.print(
-            f"- **Protocol**: {self.elb_wrapper.listener['Protocol']}\n"
-            f"- **Port**: {self.elb_wrapper.listener['LoadBalancerPort']}\n"
-            f"- **Instance Protocol**: {self.elb_wrapper.listener['InstanceProtocol']}\n"
-            f"- **Instance Port**: {self.elb_wrapper.listener['InstancePort']}"
-        )
+            subnets = []
+            for page in page_iterator:
+                subnets.extend(page["Subnets"])
 
-        """ console.print("\n**Load Balancer Health Check Configuration**:")
-        console.print(
-            f"- **Target**: {self.elb_wrapper.health_check['Target']}\n"
-            f"- **Interval**: {self.elb_wrapper.health_check['Interval']} seconds\n"
-            f"- **Timeout**: {self.elb_wrapper.health_check['Timeout']} seconds\n"
-            f"- **Healthy Threshold**: {self.elb_wrapper.health_check['HealthyThreshold']}\n"
-            f"- **Unhealthy Threshold**: {self.elb_wrapper.health_check['UnhealthyThreshold']}"
-        )
-
-        console.print("\n**Load Balancer Attributes**:")
-        console.print(
-            f"- **Cross-Zone Load Balancing**: {self.elb_wrapper.attributes['CrossZoneLoadBalancing']}\n"
-            f"- **Connection Draining**: {self.elb_wrapper.attributes['ConnectionDraining']}\n"
-            f"- **Connection Draining Timeout**: {self.elb_wrapper.attributes['ConnectionDrainingTimeout']}" """
+            console.print(f"Found {len(subnets)} subnets for the specified zones.")
+            return subnets
+        except:
+            console.print("An error occurred while retrieving subnets.", style="bold red")
+            return []
 
     def cleanup(self) -> None:
         """
@@ -454,8 +549,10 @@ class EC2InstanceScenario:
         self.create_and_list_key_pairs()
         self.create_security_group()
         self.create_instances_group(INSTANCE_COUNT_1, INSTANCE_TYPE_1)
-        #self.create_instances_group(INSTANCE_COUNT_2, INSTANCE_TYPE_2)
+        self.create_instances_group(INSTANCE_COUNT_2, INSTANCE_TYPE_2)
         self.deploy_flask_fastapi(self.inst_wrapper.instances[0]["InstanceId"])
+        self.deploy_flask_fastapi(self.inst_wrapper.instances[1]["InstanceId"])
+        self.create_load_balancer()
         # self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_1)
         #self.create_load_balancer()
         
@@ -474,11 +571,12 @@ if __name__ == "__main__":
         ElasticLoadBalancerWrapper(boto3.client("elbv2")),
         CloudWatchWrapper(boto3.resource("cloudwatch")),
         boto3.client("ssm"),
+        boto3.client("elbv2"),
+        remote_exec=False
     )
     try:
         scenario.run_scenario()
         input("Press Enter to continue...")
-        scenario.cleanup()
     except Exception:
         logging.exception("Something went wrong with the demo.")
         scenario.cleanup()

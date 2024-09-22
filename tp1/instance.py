@@ -253,7 +253,7 @@ class EC2InstanceWrapper:
         return images
 
     def get_instance_types(
-        self, architecture: str = "x86_64", sizes: List[str] = ["*.micro", "*.small"]
+        self, architecture: str = "x86_64", sizes: List[str] = ["*.micro", "*.small", "*.medium", "*.large"]
     ) -> List[Dict[str, Any]]:
         """
         Gets instance types that support the specified architecture and size.
