@@ -61,7 +61,7 @@ class SecurityGroupWrapper:
         else:
             return self.security_group
 
-    def authorize_ingress(self, ingress_ip: str) -> Optional[Dict[str, Any]]:
+    def authorize_ingress(self, ingress_ip: str, ip_permissions = None) -> Optional[Dict[str, Any]]:
         """
         Adds a rule to the security group to allow access to SSH.
 
@@ -76,22 +76,23 @@ class SecurityGroupWrapper:
             return None
 
         try:
-            ip_permissions = [
-                {
-                    # SSH ingress open to only the specified IP address.
+            if ip_permissions is None:
+                ip_permissions = [
+                    {
+                        # SSH ingress open to only the specified IP address.
+                        "IpProtocol": "tcp",
+                        "FromPort": 22,
+                        "ToPort": 22,
+                        "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
+                    },
+                    {
+                    # Web server ingress open to the specified IP address.
                     "IpProtocol": "tcp",
-                    "FromPort": 22,
-                    "ToPort": 22,
+                    "FromPort": 8000,
+                    "ToPort": 8000,
                     "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
-                },
-                {
-                # Web server ingress open to the specified IP address.
-                "IpProtocol": "tcp",
-                "FromPort": 8000,
-                "ToPort": 8000,
-                "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
-                }
-            ]
+                    }
+                ]
             response = self.ec2_client.authorize_security_group_ingress(
                 GroupId=self.security_group, IpPermissions=ip_permissions
             )

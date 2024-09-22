@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
-AWS_ACCESS_KEY_ID='ASIAYGD4W2IMQF5B35LD'
-AWS_SECRET_ACCESS_KEY='0qnZHKWbqfJRFJZKUqq4SY2pKSW0qyD97/1138IX'
-AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEG4aCXVzLXdlc3QtMiJHMEUCIB4U4Otm2cJZGCtM0+uXGXi84qHkNmA7nCH+x0aHM8jmAiEAlIbgwc54m8bunpY53M497WNfxgdGaZmJnsYcNrhOydoquwIIp///////////ARAAGgw1NjI5MDIyNTgyMDEiDOolBXbb1Lc/t+nCESqPAklEWOsCZ7FrzErT0+G7ff0fEcrDnSagofm101Pi3keu073PXPpIUPu/uQ6YEUbFkvuGdOWRisK5SZ2Y+welU2CUBFd2r/RqZiJnJo8BfjAHOY8u4QPippVourJj6QTpyphRXq4astd6/rs2R/aoTYhJH7oJUek+0PKQk0dik3cjfkj5NPFaPGoYoPJMhLKmXJeJAjNIqGAuMjCUttt6U9BN0A3qGbiGxJpIH9wIdt29gx1WXEg8nenK+UgOr6ohTrR7hm8Nr6ARR8b0RgfCthniXFTfS4F4VCg+9tsACYKRq5YghTDvIVrwc8B25q1NUDYXzaExL13IVHsvS+lE6Y6j2IkC1Svvo3PLuWfw+3kwi7jAtwY6nQHGvAKPTz5qkM4fWIe+bR2tkQryBQLSEmshr+0Jywcd164x88lRcX/hR4xj5+CFzuAjlbgyx1Wx8yeq9nd5z3dW1QqmMXGAe1fr31aG/8LROmW+SV2gORembSfQ/3IM36R1advsInWXvUyVzOrfxB1MpiYnUSSQ4EipEkfLyYX9uiiNFiZtJHcFUB5wey2tXTs+FBnlV7jsUS7Omc5N'
+AWS_ACCESS_KEY_ID='ASIAYGD4W2IMUUQPOZHD'
+AWS_SECRET_ACCESS_KEY='UDESjrR+QWQOfqjhbY/fSVvsU86MXjoEQwc6JvOA'
+AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEHYaCXVzLXdlc3QtMiJHMEUCIQCuHZYVaN9nhszk/GmauhEziF/btLqt8Vj/3UIrTsXrRgIgQWtxazU7fsaHKyZucC5sPUEe2AKf2wZCLStmjozAMssquwIIr///////////ARAAGgw1NjI5MDIyNTgyMDEiDKZ8kYy0tgbSpp836CqPAlQim/hqr7mdpXv2D/BT0VjKXHi+Akla1v7pTk/tVn0ENO72corXHfzPdf0A1f3d/XldzXalnBDkyHKWpS9hpDJZNr0lV2lFNMYbKYbnm7kCfPDOn7x/uZq43y+M3be3tOt81/0Bz2Vuf0fm75h+3np5G0WS3Eftx5wpvK7mH6E3KBJ0FvbktLePtsXgIjfWAEpREGs7esxWcnF7T4SVQO+/cgZpJ5rYHpifgH1Ltiq19vLdHttxj+J7X3Zomge0WBSQm0+a68/H923Oi9534H7/m7r2mq/GxuOx6d4813shYcAOPMJ9amh3gEt34rO2HZTNhJ41M/ORFeznXtm5/2ZWbV7Bzd4Vz87F67/WrrcwmqXCtwY6nQFwPHkRosgF7zow8osrQIy3EmMiKyi4Vd0UXrJ9tnSx7mW1SoqFWK8Ogl/GlyVWzqzgne1+XpEdXNy3K/7o9N//Fip+7JCjSEAfvNk2kvEH/KwnS/T7pDV7y1vC4rbe/DC8g5O2Nlg5YzR0uE/y3I+obIHsYz08PhARcyyV/r6NsQz6zwg513FRUFnRzUactuzGpNU0dvtX3pe491d1'
 
 # TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
@@ -31,6 +31,9 @@ INSTANCE_COUNT_1 = 1 # 10 requis
 INSTANCE_COUNT_2 = 1 # 10 requis
 INSTANCE_TYPE_1 = 't2.micro'
 INSTANCE_TYPE_2 = 't2.large'
+
+ELB_LISTERNER_PORT_1 = 80
+ELB_LISTERNER_PORT_2 = 81
 
 os.environ['INSTANCE_AMI'] = INSTANCE_AMI
 os.environ['INSTANCE_COUNT_1'] = str(INSTANCE_COUNT_1)
@@ -120,22 +123,17 @@ class EC2InstanceScenario:
                         style="bold yellow",
                     )
 
-    def create_security_group(self) -> None:
+    def create_security_group(self, name=f"MySecurityGroup-{uuid.uuid4().hex[:8]}", ) -> None:
         """
         Creates a security group that controls access to the EC2 instance and adds a rule
         to allow SSH access from the user's current public IP address.
         """
-        console.print("**Step 2: Create a Security Group**", style="bold cyan")
-        console.print(
-            "Security groups manage access to your instance. Let's create one."
-        )
-        sg_name = f"MySecurityGroup-{uuid.uuid4().hex[:8]}"
-        console.print(f"- **Security Group Name**: {sg_name}")
+        console.print("**Step 2: Create a Security Group : {name}**", style="bold cyan")
 
         # Create the security group and simulate the process with a progress bar.
         with alive_bar(1, title="Creating Security Group") as bar:
             self.sg_wrapper.create(
-                sg_name, "Security group for example: get started with instances."
+                name, "Instances security"
             )
             time.sleep(0.5)
             bar()
@@ -165,6 +163,52 @@ class EC2InstanceScenario:
             bar()
 
         self.sg_wrapper.describe(self.sg_wrapper.security_group)
+
+    def creat_security_groups(self) -> None:
+        """
+        Creates a security group for the EC2 instance and another security group for the load balancer.
+        """
+
+        console.print("\n**Step 2: Create Security Groups**", style="bold cyan")
+
+        # Create a security group for the EC2 instance
+        console.print("Creating a security group for the EC2 instance...")
+        instance_sg_name = f"Instance_SG-{uuid.uuid4().hex[:8]}"
+        instance_sg_id = self.sg_wrapper.create(instance_sg_name, "Security group for EC2 instances")
+
+        # Create a security group for the load balancer
+        console.print("Creating a security group for the load balancer...")
+        lb_sg_name = f"LoadBlancer_SG-{uuid.uuid4().hex[:8]}"
+        lb_sg_id = self.sg_wrapper.create(lb_sg_name, "Security group for the load balancer")
+
+        # Get the current public IP to set up SSH access.
+        ip_response = urllib.request.urlopen("http://checkip.amazonaws.com")
+        current_ip_address = ip_response.read().decode("utf-8").strip()
+        console.print(
+            "Add a rule to allow SSH only from your current IP address to the security group for the load balancer."
+        )
+
+        # Update security group rules to allow SSH and simulate with a progress bar.
+        with alive_bar(1, title="Updating Security Group Rules") as bar:
+            elb_ip_permissions = [
+                    {
+                        # SSH ingress open to only the specified IP address.
+                        "IpProtocol": "tcp",
+                        "FromPort": 80,
+                        "ToPort": 80,
+                        "IpRanges": [{"CidrIp": f"{ip_response}/32"}],
+                    },
+                    {
+                    # Web server ingress open to the specified IP address.
+                    "IpProtocol": "tcp",
+                    "FromPort": 443,
+                    "ToPort": 443,
+                    "IpRanges": [{"CidrIp": f"{ip_response}/32"}],
+                    }
+                ]
+            
+            response = self.sg_wrapper.authorize_ingress(current_ip_address, elb_ip_permissions)
+                                          
 
     def create_instance(self, instance_type) -> None:
         """
@@ -228,6 +272,7 @@ class EC2InstanceScenario:
         """
         Create multiple instances at once
         """
+        
         for i in range(count):
             self.create_instance(instance_type)
         
@@ -352,7 +397,7 @@ class EC2InstanceScenario:
             for data_point in stats['Datapoints']:
                 print(f"Instance ID: {instance_id}, Timestamp: {data_point['Timestamp']}, CPU Utilization: {data_point['Average']}")
 
-    def create_target_group(self, name, protocol = 'HTTP', port = '8000', vpc_id = None, target_type = 'instance') -> dict:
+    def create_target_group(self, name, protocol, port, vpc_id, target_type) -> dict:
         try:
             response = self.elbv2_client.create_target_group(
                 Name=name,
@@ -377,9 +422,6 @@ class EC2InstanceScenario:
         # Get VPC
         vpc_id = self.inst_wrapper.instances[0]["VpcId"]
 
-        # Create two target groups for the load balancer.
-        #target_group_1 = self.elb_wrapper.create_target_group(target_group_name = f"TargetGroup1-{uuid.uuid4().hex[:8]}", protocol='HTTP', port=80, vpc_id=vpc_id)
-
         console.print("\n**Step 5: Create a Load Balancer**", style="bold cyan")
         console.print("Creating a load balancer to distribute incoming traffic...")
 
@@ -388,14 +430,14 @@ class EC2InstanceScenario:
             subnets = self.get_subnets(vpc_id)
             
             load_balancer_name = f"LoadBalancer-{uuid.uuid4().hex[:8]}"
-            self.elb_wrapper.create_load_balancer(
-                load_balancer_name, [subnet["SubnetId"] for subnet in subnets]
-            )
+            elb = self.elb_wrapper.create_load_balancer(
+                    load_balancer_name, [subnet["SubnetId"] for subnet in subnets]
+                    )
 
             target_group_1 = self.create_target_group(
                 name=f"TargetGroup1-{uuid.uuid4().hex[:8]}", 
                 protocol='HTTP', 
-                port=80, 
+                port=8000, 
                 vpc_id=vpc_id,
                 target_type='instance'
             )
@@ -403,15 +445,14 @@ class EC2InstanceScenario:
             self.elbv2_client.register_targets(
                 TargetGroupArn=target_group_1['TargetGroupArn'],
                 Targets=[{'Id': self.inst_wrapper.instances[0]['InstanceId'],
-                            'Port': 80
+                            'Port': 8000
                             }]
                 )
-            console.print(f"Instance {self.inst_wrapper.instances[0]['InstanceId']} registered with target group {target_group_1['TargetGroupArn']}.")
             
             target_group_2 = self.create_target_group(
                 name=f"TargetGroup2-{uuid.uuid4().hex[:8]}", 
                 protocol='HTTP', 
-                port=81, 
+                port=8000,
                 vpc_id=vpc_id,
                 target_type='instance'
                 )
@@ -420,14 +461,52 @@ class EC2InstanceScenario:
             self.elbv2_client.register_targets(
                 TargetGroupArn=target_group_2['TargetGroupArn'],
                 Targets=[{'Id': self.inst_wrapper.instances[1]['InstanceId'],
-                            'Port': 81
+                            'Port': 8000
                             }]
                 )
-            console.print(f"Instance {self.inst_wrapper.instances[1]['InstanceId']} registered with target group {target_group_2['TargetGroupArn']}.")
 
-            self.elb_wrapper.create_listener(load_balancer_name, target_group_1)
-            self.elb_wrapper.create_listener(load_balancer_name, target_group_2)
+            # Obtain the ARN of the load balancer
+            lb_arn = elb['LoadBalancers'][0]['LoadBalancerArn']
 
+            # Create a listener for the load balancer
+            listener = self.elbv2_client.create_listener(
+                LoadBalancerArn=lb_arn,
+                Protocol='HTTP',
+                Port=80,
+                DefaultActions=[
+                    {
+                        "Type": "fixed-response",
+                        "FixedResponseConfig": {
+                            "StatusCode": "404"
+                        }
+                    }
+                ],
+            )
+
+            listener_arn = listener['Listeners'][0].get('ListenerArn')
+            if listener_arn is None:
+                raise RuntimeError('Listener ARN not found')
+            self.elbv2_client.create_rule(
+                ListenerArn=listener_arn,
+                Conditions=[
+                    {'Field': 'path-pattern', 'Values': ['/cluster1', '/cluster1/*']},
+                ],
+                Priority=1,
+                Actions=[
+                    {'Type': 'forward', 'TargetGroupArn': target_group_1['TargetGroupArn']},
+                ],
+            )
+            self.elbv2_client.create_rule(
+                ListenerArn=listener_arn,
+                Conditions=[
+                    {'Field': 'path-pattern', 'Values': ['/cluster2', '/cluster2/*']},
+                ],
+                Priority=2,
+                Actions=[
+                    {'Type': 'forward', 'TargetGroupArn': target_group_2['TargetGroupArn']},
+                ],
+            )
+            
             logging.info("Verifying access to the load balancer endpoint.")
             endpoint = self.elb_wrapper.get_endpoint(load_balancer_name)
             lb_success = self.elb_wrapper.verify_load_balancer_endpoint(endpoint)
@@ -550,8 +629,8 @@ class EC2InstanceScenario:
         self.create_security_group()
         self.create_instances_group(INSTANCE_COUNT_1, INSTANCE_TYPE_1)
         self.create_instances_group(INSTANCE_COUNT_2, INSTANCE_TYPE_2)
-        self.deploy_flask_fastapi(self.inst_wrapper.instances[0]["InstanceId"])
-        self.deploy_flask_fastapi(self.inst_wrapper.instances[1]["InstanceId"])
+        for instance in self.inst_wrapper.instances:
+            self.deploy_flask_fastapi(instance["InstanceId"])
         self.create_load_balancer()
         # self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_1)
         #self.create_load_balancer()
