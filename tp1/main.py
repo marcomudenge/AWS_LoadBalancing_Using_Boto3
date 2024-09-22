@@ -4,6 +4,7 @@ import urllib.request
 import uuid
 import os
 import paramiko
+from datetime import datetime, timedelta
 
 import boto3
 from alive_progress import alive_bar
@@ -14,6 +15,7 @@ from instance import EC2InstanceWrapper
 from keypair import KeyPairWrapper
 from security_group import SecurityGroupWrapper
 from load_balancer import ElasticLoadBalancerWrapper
+from cloudwatch import CloudWatchWrapper
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -57,6 +59,7 @@ class EC2InstanceScenario:
         key_wrapper: KeyPairWrapper,
         sg_wrapper: SecurityGroupWrapper,
         elb_wrapper: ElasticLoadBalancerWrapper,
+        cloudwatch_wrapper: CloudWatchWrapper,
         ssm_client: boto3.client,
         remote_exec: bool = False,
     ):
@@ -76,6 +79,7 @@ class EC2InstanceScenario:
         self.key_wrapper = key_wrapper
         self.sg_wrapper = sg_wrapper
         self.elb_wrapper = elb_wrapper
+        self.cloudwatch_wrapper = cloudwatch_wrapper
         self.ssm_client = ssm_client
         self.remote_exec = remote_exec
 
@@ -205,7 +209,7 @@ class EC2InstanceScenario:
                 self.key_wrapper.key_pair["KeyName"],
                 [self.sg_wrapper.security_group],
             )
-            time.sleep(21)
+            time.sleep(1)
             bar()
 
         console.print(f"**Success! Your instance is ready:**\n", style="bold green")
@@ -242,7 +246,7 @@ class EC2InstanceScenario:
 
             with alive_bar(1, title="Waiting for Instance to Start") as bar:
                 waiter.wait(InstanceIds=[instance_id])
-                time.sleep(20)
+                time.sleep(1)
                 bar()
 
             public_ip = self.get_public_ip(instance_id)
@@ -322,6 +326,29 @@ class EC2InstanceScenario:
         
         finally:
             ssh.close()
+
+    def monitor_cluster_performance(self, instance_ids, instance_type):
+        """
+        Monitor the performance of the EC2 instances in the cluster by retrieving
+        CPU utilization metrics from CloudWatch.
+        """
+        start_time = datetime.now() - timedelta(minutes=20)
+        end_time = datetime.now()
+        print(f"Performance Metrics for {instance_type} instances:")
+        for instance_id in instance_ids:
+            # Get CPU Utilization statistics
+            stats = self.cloudwatch_wrapper.get_metric_statistics(
+                namespace='AWS/EC2',
+                name='CPUUtilization',
+                start=start_time,
+                end=end_time,
+                period=60,  # intervals
+                stat_types=['Average']
+            )
+            
+            # Display the metrics
+            for data_point in stats['Datapoints']:
+                print(f"Instance ID: {instance_id}, Timestamp: {data_point['Timestamp']}, CPU Utilization: {data_point['Average']}")
 
     def create_load_balancer(self) -> None:
         """
@@ -429,6 +456,7 @@ class EC2InstanceScenario:
         self.create_instances_group(INSTANCE_COUNT_1, INSTANCE_TYPE_1)
         #self.create_instances_group(INSTANCE_COUNT_2, INSTANCE_TYPE_2)
         self.deploy_flask_fastapi(self.inst_wrapper.instances[0]["InstanceId"])
+        # self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_1)
         #self.create_load_balancer()
         
         # TODO: Étapes suivantes
@@ -444,6 +472,7 @@ if __name__ == "__main__":
         KeyPairWrapper.from_client(),
         SecurityGroupWrapper.from_client(),
         ElasticLoadBalancerWrapper(boto3.client("elbv2")),
+        CloudWatchWrapper(boto3.resource("cloudwatch")),
         boto3.client("ssm"),
     )
     try:

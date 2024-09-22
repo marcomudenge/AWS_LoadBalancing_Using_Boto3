@@ -3,7 +3,7 @@ import aiohttp
 import time
 
 async def call_endpoint_http (session, request_num) :
-    url = "your load balancer url"
+    url = "http://52.90.201.164:8000"
     headers = {'content-type': 'application/json'}
     try:
         async with session.get(url, headers=headers ) as response :
