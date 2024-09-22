@@ -433,11 +433,9 @@ class EC2InstanceScenario:
             security_group_id = self.sg_wrapper.security_group
 
             load_balancer_name = f"LoadBalancer-{uuid.uuid4().hex[:8]}"
-            elb = self.elbv2_client.create_load_balancer(
-                Name=load_balancer_name,
-                Subnets=[subnet['SubnetId'] for subnet in subnets],
-                SecurityGroups=[security_group_id]
-            )
+            elb = self.elb_wrapper.create_load_balancer(
+                    load_balancer_name, [subnet["SubnetId"] for subnet in subnets], [security_group_id]
+                    )
 
             target_group_1 = self.create_target_group(
                 name=f"TargetGroup1-{uuid.uuid4().hex[:8]}", 

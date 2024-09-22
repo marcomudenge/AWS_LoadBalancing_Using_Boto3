@@ -91,6 +91,13 @@ class SecurityGroupWrapper:
                     "FromPort": 8000,
                     "ToPort": 8000,
                     "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
+                    },
+                    {
+                    # Web server ingress open to the specified IP address.
+                    "IpProtocol": "tcp",
+                    "FromPort": 80,
+                    "ToPort": 80,
+                    "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
                     }
                 ]
             response = self.ec2_client.authorize_security_group_ingress(

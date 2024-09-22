@@ -128,6 +128,7 @@ class ElasticLoadBalancerWrapper:
         self,
         load_balancer_name: str,
         subnet_ids: List[str],
+        secruity_group_ids: List[str],
     ) -> Dict[str, Any]:
         """
         Creates an Elastic Load Balancing load balancer that uses the specified subnets
@@ -139,7 +140,7 @@ class ElasticLoadBalancerWrapper:
         """
         try:
             response = self.elb_client.create_load_balancer(
-                Name=load_balancer_name, Subnets=subnet_ids
+                Name=load_balancer_name, Subnets=subnet_ids, SecurityGroups=secruity_group_ids
             )
             load_balancer = response["LoadBalancers"][0]
             log.info(f"Created load balancer '{load_balancer_name}'.")
