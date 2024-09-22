@@ -286,7 +286,7 @@ class EC2InstanceScenario:
             "sudo yum install python3 python3-pip -y",
             "pip3 install Flask fastapi uvicorn",
             "chmod +x FastAPI/main.py",
-            "python3 FastAPI/main.py > output.log 2>&1 &"
+            f"INSTANCE_ID={instance_id} python3 FastAPI/main.py > output.log 2>&1 &"
         ]
         public_ip = self.get_public_ip(instance_id)
         ssh = paramiko.SSHClient() #TODO: Check if possible to use ssm client instead (seems to be blocked)
@@ -386,7 +386,7 @@ class EC2InstanceScenario:
         for instance in self.inst_wrapper.instances:
             with alive_bar(1, title="Terminating Instance") as bar:
                 self.inst_wrapper.terminate()
-                time.sleep(380)
+                time.sleep(1)
                 bar()
 
             console.print("\t- **Terminated Instance with ID: {instance['InstanceId']}**")
