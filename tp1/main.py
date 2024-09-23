@@ -16,14 +16,15 @@ from keypair import KeyPairWrapper
 from security_group import SecurityGroupWrapper
 from load_balancer import ElasticLoadBalancerWrapper
 from cloudwatch import CloudWatchWrapper
+import benchmark as bm
 
 logger = logging.getLogger(__name__)
 console = Console()
 
 
-AWS_ACCESS_KEY_ID='ASIAYGD4W2IMUUQPOZHD'
-AWS_SECRET_ACCESS_KEY='UDESjrR+QWQOfqjhbY/fSVvsU86MXjoEQwc6JvOA'
-AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEHYaCXVzLXdlc3QtMiJHMEUCIQCuHZYVaN9nhszk/GmauhEziF/btLqt8Vj/3UIrTsXrRgIgQWtxazU7fsaHKyZucC5sPUEe2AKf2wZCLStmjozAMssquwIIr///////////ARAAGgw1NjI5MDIyNTgyMDEiDKZ8kYy0tgbSpp836CqPAlQim/hqr7mdpXv2D/BT0VjKXHi+Akla1v7pTk/tVn0ENO72corXHfzPdf0A1f3d/XldzXalnBDkyHKWpS9hpDJZNr0lV2lFNMYbKYbnm7kCfPDOn7x/uZq43y+M3be3tOt81/0Bz2Vuf0fm75h+3np5G0WS3Eftx5wpvK7mH6E3KBJ0FvbktLePtsXgIjfWAEpREGs7esxWcnF7T4SVQO+/cgZpJ5rYHpifgH1Ltiq19vLdHttxj+J7X3Zomge0WBSQm0+a68/H923Oi9534H7/m7r2mq/GxuOx6d4813shYcAOPMJ9amh3gEt34rO2HZTNhJ41M/ORFeznXtm5/2ZWbV7Bzd4Vz87F67/WrrcwmqXCtwY6nQFwPHkRosgF7zow8osrQIy3EmMiKyi4Vd0UXrJ9tnSx7mW1SoqFWK8Ogl/GlyVWzqzgne1+XpEdXNy3K/7o9N//Fip+7JCjSEAfvNk2kvEH/KwnS/T7pDV7y1vC4rbe/DC8g5O2Nlg5YzR0uE/y3I+obIHsYz08PhARcyyV/r6NsQz6zwg513FRUFnRzUactuzGpNU0dvtX3pe491d1'
+AWS_ACCESS_KEY_ID='ASIAQHVV6K7D6HWZGYKA'
+AWS_SECRET_ACCESS_KEY='40+oaERpJpgHeDRF22SmQfKDPefCBxN9NcWRPUpy'
+AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEHgaCXVzLXdlc3QtMiJHMEUCICLIQYsxVHDRS0TmbsMQR3ZnYwx1bqZUweVFvocVBvS9AiEA0vetwPVKifw5KysMNP/GN/ADceJX/0GQDgFIcbWgVqcqswIIsf//////////ARAAGgwwMTY0ODc3MDA0MjMiDPCpjG+drO0/fklT9SqHArRzRavAB/CvdVLnOGjbc5fgHclonCM/UhOvOVRZijXVZrkZOzhXAt3W/OKrBxLYJH3H8+hhLQN3Aw2SfRdAOz2EpmmWgyys/kb15ch8e5CYrZ9W5yj+nCqYI6lvUal7ZPqDyHkBLsIifOIrqmGMYTNJchPkW2/zb6w5PM+oPV1yEg8ytKucKoTIAhkVxS3ZYcaAzplj4Q6ylCmyeHx1BIxPBkflW1h2Y4iLY15A+q8KGWnCroblNEXqIvQStlQqHJAr63IdpZ5FMP7lHcMT6eG77ULKSxS+KTX+N8VNQDE6egFyG2C/d82XV0HN7sVEJnDJlXdeH+wb9kGnosEanDIo9fKvrD3wMLrOwrcGOp0BcErOBM5iuDaRPBLQbbkh+YqgIRpmt0LbyuCZhHoYwAA4eShBKrrmaZlL41IhOe0KoVV2kGayQN3RdAJ+RVAL9gfgWBz+Pw227SuJqqQS0gqsUn4crrONC2mGmDsR8RpCpFS/bisY094tR/HpA5jqyf/AhlTscV5HD9IEsxEVZ2+JGChBtfbO0cmoL8GpUJeI5ojAOtew736nbEeC8Q=='
 
 # TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
@@ -584,35 +585,51 @@ class EC2InstanceScenario:
         """
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
+        
+        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
+        if self.elb_wrapper.load_balancer:
+            with alive_bar(1, title="Deleting Load Balancer") as bar:
+                self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])
+                time.sleep(0.4)
+                bar()
+            
+        console.print("\t- **Deleted Load Balancer**")
+        
+        console.print("- **Target Groups**")
+        if self.elb_wrapper.target_groups:
+            with alive_bar(1, title="Deleting Target Groups") as bar:
+                for target_group in self.elb_wrapper.target_groups:
+                    self.elb_wrapper.delete_target_group(target_group["TargetGroupName"])
+                time.sleep(0.4)
+                bar()
 
         console.print(f"- **Instances count**: {len(self.inst_wrapper.instances)}")
-
-        for instance in self.inst_wrapper.instances:
+        if self.inst_wrapper.instances:
             with alive_bar(1, title="Terminating Instance") as bar:
                 self.inst_wrapper.terminate()
                 time.sleep(1)
                 bar()
 
-            console.print("\t- **Terminated Instance with ID: {instance['InstanceId']}**")
+        console.print("\t- **Terminated Instance with ID: {instance['InstanceId']}**")
 
         console.print(f"- **Security Group**: {self.sg_wrapper.security_group}")
-
-        with alive_bar(1, title="Deleting Security Group") as bar:
-            self.sg_wrapper.delete(self.sg_wrapper.security_group)
-            time.sleep(1)
-            bar()
+        if self.sg_wrapper.security_group:
+            with alive_bar(1, title="Deleting Security Group") as bar:
+                self.sg_wrapper.delete(self.sg_wrapper.security_group)
+                time.sleep(1)
+                bar()
 
         console.print("\t- **Deleted Security Group**")
 
         console.print(f"- **Key Pair**: {self.key_wrapper.key_pair['KeyName']}")
-
-        with alive_bar(1, title="Deleting Key Pair") as bar:
-            self.key_wrapper.delete(self.key_wrapper.key_pair["KeyName"])
-            time.sleep(0.4)
-            bar()
+        if self.key_wrapper.key_pair:
+            with alive_bar(1, title="Deleting Key Pair") as bar:
+                self.key_wrapper.delete(self.key_wrapper.key_pair["KeyName"])
+                time.sleep(0.4)
+                bar()
 
         console.print("\t- **Deleted Key Pair**")
-
+        
     def run_scenario(self) -> None:
         """
         Executes the entire EC2 instance scenario: creates key pairs, security groups,
@@ -635,11 +652,10 @@ class EC2InstanceScenario:
         for instance in self.inst_wrapper.instances:
             self.deploy_flask_fastapi(instance["InstanceId"])
         self.create_load_balancer()
-        # self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_1)
-        #self.create_load_balancer()
-        
-        # TODO: Étapes suivantes
-        # self.cleanup()
+        input("Press Enter to start benchmark...")
+        bm.main()
+        input("Press Enter to view performances...")
+        self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_1)
 
         console.print("\nThanks for watching!", style="bold green")
         console.print("-" * 88)

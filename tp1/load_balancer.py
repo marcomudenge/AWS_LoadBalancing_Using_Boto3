@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import boto3
 import requests
@@ -11,11 +11,13 @@ log = logging.getLogger(__name__)
 class ElasticLoadBalancerWrapper:
     """Encapsulates Elastic Load Balancing (ELB) actions."""
 
-    def __init__(self, elb_client: boto3.client):
+    def __init__(self, elb_client: boto3.client, load_balancer: Optional[str] = None, target_groups: Optional[List[str]] = None):
         """
         Initializes the LoadBalancer class with the necessary parameters.
         """
         self.elb_client = elb_client
+        self.load_balancer = load_balancer
+        self.target_groups = target_groups
 
     def create_target_group(
         self, target_group_name: str, protocol: str, port: int, vpc_id: str
@@ -50,6 +52,7 @@ class ElasticLoadBalancerWrapper:
             )
             target_group = response["TargetGroups"][0]
             log.info(f"Created load balancing target group '{target_group_name}'.")
+            self.target_groups.append(target_group)
             return target_group
         except ClientError as err:
             log.error(
@@ -151,6 +154,7 @@ class ElasticLoadBalancerWrapper:
             )
             waiter.wait(Names=[load_balancer_name])
             log.info(f"Load balancer '{load_balancer_name}' is now available!")
+            self.load_balancer = load_balancer
 
         except ClientError as err:
             error_code = err.response["Error"]["Code"]

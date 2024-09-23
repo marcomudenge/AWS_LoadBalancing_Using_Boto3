@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 import uvicorn
 import logging
 import os
@@ -13,9 +13,9 @@ instance_id = os.getenv('INSTANCE_ID', 'unknown')
 app = FastAPI()
 
 
-@app.get("/")
-async def root():
-    message = f"Instance {instance_id} has received the request"
+@app.get("/{path:path}")
+async def catch_all(path: str = Path(...)):
+    message = f"Instance {instance_id} has received the request for path: {path}"
     logger.info(message)
     return {"message": message}
 
