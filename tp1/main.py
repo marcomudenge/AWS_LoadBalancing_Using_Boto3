@@ -579,7 +579,7 @@ class EC2InstanceScenario:
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
         
-        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
+        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer['LoadBalancerName']}")
         if self.elb_wrapper.load_balancer:
             with alive_bar(1, title="Deleting Load Balancer") as bar:
                 self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])
