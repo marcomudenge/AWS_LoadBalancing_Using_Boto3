@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 import urllib.request
@@ -5,6 +6,7 @@ import uuid
 import os
 import paramiko
 from datetime import datetime, timedelta
+import pandas as pd
 
 import boto3
 from alive_progress import alive_bar
@@ -380,7 +382,9 @@ class EC2InstanceScenario:
         start_time = datetime.now() - timedelta(minutes=20)
         end_time = datetime.now()
         print(f"Performance Metrics for {instance_type} instances:")
+        data = []
         for instance_id in instance_ids:
+            instance_data = {}
             # Get CPU Utilization statistics
             stats = self.cloudwatch_wrapper.get_metric_statistics(
                 namespace='AWS/EC2',
@@ -390,10 +394,17 @@ class EC2InstanceScenario:
                 period=60,  # intervals
                 stat_types=['Average']
             )
-            
-            # Display the metrics
-            for data_point in stats['Datapoints']:
-                print(f"Instance ID: {instance_id}, Timestamp: {data_point['Timestamp']}, CPU Utilization: {data_point['Average']}")
+
+            # get the average CPU utilization
+            instance_data["instance_id"] = instance_id
+            instance_data["Average"] = sum([datapoint['Average'] for datapoint in stats['Datapoints']]) / len(stats['Datapoints'])
+            instance_data["Max"] = max([datapoint['Average'] for datapoint in stats['Datapoints']])
+            data.append(instance_data)
+        
+        # put all data in a pandas dataframe
+        df = pd.DataFrame(data)
+        # export the data to a CSV file
+        df.to_csv(f"{instance_type}_performance.csv", index=False)
 
     def create_target_group(self, name, protocol, port, vpc_id, target_type) -> dict:
         try:
@@ -586,22 +597,22 @@ class EC2InstanceScenario:
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
         
-        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
-        if self.elb_wrapper.load_balancer:
-            with alive_bar(1, title="Deleting Load Balancer") as bar:
-                self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])
-                time.sleep(0.4)
-                bar()
+        # console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
+        # if self.elb_wrapper.load_balancer:
+        #     with alive_bar(1, title="Deleting Load Balancer") as bar:
+        #         self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])
+        #         time.sleep(0.4)
+        #         bar()
             
-        console.print("\t- **Deleted Load Balancer**")
+        # console.print("\t- **Deleted Load Balancer**")
         
-        console.print("- **Target Groups**")
-        if self.elb_wrapper.target_groups:
-            with alive_bar(1, title="Deleting Target Groups") as bar:
-                for target_group in self.elb_wrapper.target_groups:
-                    self.elb_wrapper.delete_target_group(target_group["TargetGroupName"])
-                time.sleep(0.4)
-                bar()
+        # console.print("- **Target Groups**")
+        # if self.elb_wrapper.target_groups:
+        #     with alive_bar(1, title="Deleting Target Groups") as bar:
+        #         for target_group in self.elb_wrapper.target_groups:
+        #             self.elb_wrapper.delete_target_group(target_group["TargetGroupName"])
+        #         time.sleep(0.4)
+        #         bar()
 
         console.print(f"- **Instances count**: {len(self.inst_wrapper.instances)}")
         if self.inst_wrapper.instances:
@@ -653,9 +664,12 @@ class EC2InstanceScenario:
             self.deploy_flask_fastapi(instance["InstanceId"])
         self.create_load_balancer()
         input("Press Enter to start benchmark...")
-        bm.main()
+        lb_dns = self.elb_wrapper.load_balancer["DNSName"]
+        console.print(f"Starting benchmark with load balancer DNS: {lb_dns}")
+        asyncio.run(bm.main(lb_dns))
         input("Press Enter to view performances...")
         self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_1)
+        self.monitor_cluster_performance([instance["InstanceId"] for instance in self.inst_wrapper.instances], INSTANCE_TYPE_2)
 
         console.print("\nThanks for watching!", style="bold green")
         console.print("-" * 88)

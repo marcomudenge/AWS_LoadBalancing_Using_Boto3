@@ -68,7 +68,7 @@ class EC2InstanceWrapper:
                 instance_params["SecurityGroupIds"] = security_group_ids
 
             response = self.ec2_client.run_instances(
-                **instance_params, MinCount=1, MaxCount=1
+                **instance_params, MinCount=1, MaxCount=1, Monitoring={'Enabled': True},
             )
             instance = response["Instances"][0]
             self.instances.append(instance)
