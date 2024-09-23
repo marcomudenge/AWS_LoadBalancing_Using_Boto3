@@ -294,7 +294,7 @@ class EC2InstanceScenario:
         Deploys a FastAPI application to the EC2 instance by sending the files over SCP
         and running the necessary commands to install dependencies and start the server.
         """
-        console.print("\n**Step x: Deploy FastAPI Application**", style="bold cyan")
+        console.print(f"\n**Deploy FastAPI Application on instance {instance_id}**", style="bold cyan")
         public_ip = self.get_public_ip(instance_id)
         scp_command = "scp -i " + self.key_wrapper.key_file_path + " -o StrictHostKeyChecking=no -r ./FastAPI ec2-user@" + public_ip + ":~/"
         print(scp_command)
@@ -379,19 +379,14 @@ class EC2InstanceScenario:
         # export the dataframe to a csv file
         df.to_csv('performance_metrics.csv', index=False)
 
-    def create_target_group(self, name, protocol, port, vpc_id, target_type) -> dict:
+    def create_target_group(self, name, protocol, port, vpc_id) -> dict:
         try:
-            response = self.elbv2_client.create_target_group(
-                Name=name,
-                Protocol=protocol,
-                Port=port,
-                VpcId=vpc_id,
-                HealthCheckProtocol='HTTP',
-                HealthCheckPort='8000',
-                HealthCheckPath='/',
-                TargetType=target_type
+            target_group = self.elb_wrapper.create_target_group(
+                target_group_name=name,
+                protocol=protocol,
+                port=port,
+                vpc_id=vpc_id,
                 )
-            target_group = response['TargetGroups'][0]
             console.print(f"Created target group: {target_group['TargetGroupArn']}")
             return target_group
         except Exception as e:
@@ -427,7 +422,6 @@ class EC2InstanceScenario:
                 protocol='HTTP', 
                 port=8000, 
                 vpc_id=vpc_id,
-                target_type='instance'
             )
 
             # Get targets with instance type t2.micro
@@ -445,7 +439,6 @@ class EC2InstanceScenario:
                 protocol='HTTP', 
                 port=8000,
                 vpc_id=vpc_id,
-                target_type='instance'
                 )
             
             # Register the instance with the target group
@@ -471,6 +464,7 @@ class EC2InstanceScenario:
                     }
                 ],
             )
+            self.elb_wrapper.listener = listener['Listeners'][0]
 
             listener_arn = listener['Listeners'][0].get('ListenerArn')
             if listener_arn is None:
@@ -571,7 +565,14 @@ class EC2InstanceScenario:
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
         
-        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
+        console.print("- **Listeners**")
+        if self.elb_wrapper.listener:
+            with alive_bar(1, title="Deleting Load Balancer") as bar:
+                self.elb_wrapper.delete_listener(self.elb_wrapper.listener["ListenerArn"])
+                time.sleep(0.4)
+                bar()
+        
+        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer['LoadBalancerName']}")
         if self.elb_wrapper.load_balancer:
             with alive_bar(1, title="Deleting Load Balancer") as bar:
                 self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])

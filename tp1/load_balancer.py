@@ -11,13 +11,14 @@ log = logging.getLogger(__name__)
 class ElasticLoadBalancerWrapper:
     """Encapsulates Elastic Load Balancing (ELB) actions."""
 
-    def __init__(self, elb_client: boto3.client, load_balancer: Optional[str] = None, target_groups: Optional[List[str]] = None):
+    def __init__(self, elb_client: boto3.client, load_balancer: Optional[str] = None, listener: Optional[str] = None):
         """
         Initializes the LoadBalancer class with the necessary parameters.
         """
         self.elb_client = elb_client
         self.load_balancer = load_balancer
-        self.target_groups = target_groups
+        self.listener = listener
+        self.target_groups = []
 
     def create_target_group(
         self, target_group_name: str, protocol: str, port: int, vpc_id: str
@@ -43,12 +44,13 @@ class ElasticLoadBalancerWrapper:
                 Protocol=protocol,
                 Port=port,
                 HealthCheckPath="/",
-                HealthCheckPort=8000,
+                HealthCheckPort='8000',
                 HealthCheckIntervalSeconds=10,
                 HealthCheckTimeoutSeconds=5,
                 HealthyThresholdCount=2,
                 UnhealthyThresholdCount=2,
                 VpcId=vpc_id,
+                TargetType="instance",
             )
             target_group = response["TargetGroups"][0]
             log.info(f"Created load balancing target group '{target_group_name}'.")
@@ -177,60 +179,28 @@ class ElasticLoadBalancerWrapper:
         else:
             return load_balancer
 
-    def create_listener(
-        self,
-        load_balancer_name: str,
-        target_group: Dict[str, Any],
-    ) -> Dict[str, Any]:
+    def delete_listener(self, listener_arn: str) -> None:
         """
-        Creates a listener for the specified load balancer that forwards requests to the
-        specified target group.
+        Deletes a listener from a load balancer.
 
-        :param load_balancer_name: The name of the load balancer to create a listener for.
-        :param target_group: An existing target group that is added as a listener to the
-                             load balancer.
-        :return: Data about the newly created listener.
+        :param load_balancer_name: The name of the load balancer to delete the listener from.
+        :param listener_arn: The ARN of the listener to delete.
         """
         try:
-            # Retrieve the load balancer ARN
-            load_balancer_response = self.elb_client.describe_load_balancers(
-                Names=[load_balancer_name]
-            )
-            load_balancer_arn = load_balancer_response["LoadBalancers"][0][
-                "LoadBalancerArn"
-            ]
-
-            # Create the listener
-            response = self.elb_client.create_listener(
-                LoadBalancerArn=load_balancer_arn,
-                Protocol=target_group["Protocol"],
-                Port=target_group["Port"],
-                DefaultActions=[
-                    {
-                        "Type": "forward",
-                        "TargetGroupArn": target_group["TargetGroupArn"],
-                    }
-                ],
-            )
+            self.elb_client.delete_listener(ListenerArn=listener_arn)
             log.info(
-                f"Created listener to forward traffic from load balancer '{load_balancer_name}' to target group '{target_group['TargetGroupName']}'."
+                f"Deleted listener {listener_arn}."
             )
-            return response["Listeners"][0]
         except ClientError as err:
             error_code = err.response["Error"]["Code"]
             log.error(
-                f"Failed to add a listener on '{load_balancer_name}' for target group '{target_group['TargetGroupName']}'."
+                f"Failed to delete listener {listener_arn}."
             )
 
             if error_code == "ListenerNotFoundException":
                 log.error(
-                    f"The listener could not be found for the load balancer '{load_balancer_name}'. "
-                    "Please check the load balancer name and target group configuration."
-                )
-            if error_code == "InvalidConfigurationRequestException":
-                log.error(
-                    f"The configuration provided for the listener on load balancer '{load_balancer_name}' is invalid. "
-                    "Please review the provided protocol, port, and target group settings."
+                    f"The listener {listener_arn} could not be found."
+                    "Please check the listener ARN and load balancer name."
                 )
             log.error(f"Full error:\n\t{err}")
 
