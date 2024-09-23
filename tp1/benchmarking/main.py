@@ -3,7 +3,7 @@ import aiohttp
 import time
 
 async def call_endpoint_http (session, request_num) :
-    url = "http://52.90.201.164:8000"
+    url = "http://LoadBalancer-8d8b8cd9-506745965.us-east-1.elb.amazonaws.com/cluster1"
     headers = {'content-type': 'application/json'}
     try:
         async with session.get(url, headers=headers ) as response :

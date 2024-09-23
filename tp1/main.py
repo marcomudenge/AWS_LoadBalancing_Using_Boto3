@@ -32,9 +32,6 @@ INSTANCE_COUNT_2 = 1 # 10 requis
 INSTANCE_TYPE_1 = 't2.micro'
 INSTANCE_TYPE_2 = 't2.large'
 
-ELB_LISTERNER_PORT_1 = 80
-ELB_LISTERNER_PORT_2 = 81
-
 os.environ['INSTANCE_AMI'] = INSTANCE_AMI
 os.environ['INSTANCE_COUNT_1'] = str(INSTANCE_COUNT_1)
 os.environ['INSTANCE_COUNT_2'] = str(INSTANCE_COUNT_2)
@@ -427,7 +424,10 @@ class EC2InstanceScenario:
 
         # Create a load balancer and simulate the process with a progress bar.
         with alive_bar(1, title="Creating Load Balancer") as bar:
-            subnets = self.get_subnets(vpc_id)
+            instance_availability_zones = [inst["Placement"]["AvailabilityZone"] for inst in self.inst_wrapper.instances]
+            instance_availability_zones.extend(['us-east-1a', 'us-east-1b'])
+            instance_availability_zones = list(set(instance_availability_zones))
+            subnets = self.get_subnets(vpc_id, zones=instance_availability_zones)
             
             # Get VPC security group
             security_group_id = self.sg_wrapper.security_group
@@ -661,4 +661,4 @@ if __name__ == "__main__":
         input("Press Enter to continue...")
     except Exception:
         logging.exception("Something went wrong with the demo.")
-        scenario.cleanup()
+    scenario.cleanup()

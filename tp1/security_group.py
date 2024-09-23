@@ -90,7 +90,7 @@ class SecurityGroupWrapper:
                     "IpProtocol": "tcp",
                     "FromPort": 8000,
                     "ToPort": 8000,
-                    "IpRanges": [{"CidrIp": f"{ingress_ip}/32"}],
+                    "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
                     },
                     {
                     # Web server ingress open to the specified IP address.

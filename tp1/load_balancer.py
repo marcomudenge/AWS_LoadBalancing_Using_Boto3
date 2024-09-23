@@ -298,7 +298,7 @@ class ElasticLoadBalancerWrapper:
                     "Got response %s from load balancer endpoint.",
                     lb_response.status_code,
                 )
-                if lb_response.status_code == 200:
+                if lb_response.status_code == 404: # default response with / path
                     verified = True
                 else:
                     retries = 0
