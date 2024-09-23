@@ -4,7 +4,7 @@ if (!(Test-Path -Path "requirements.txt")) {
     exit 1
 }
 
-if (!(Test-Path -Path "AWS_access.txt")) {
+if (!(Test-Path -Path "tp1/AWS_access.txt")) {
     Write-Host "requirements.txt not found!"
     exit 1
 }
