@@ -247,9 +247,6 @@ class ElasticLoadBalancerWrapper:
             lb_arn = response["LoadBalancers"][0]["LoadBalancerArn"]
             self.elb_client.delete_load_balancer(LoadBalancerArn=lb_arn)
             log.info("Deleted load balancer %s.", load_balancer_name)
-            waiter = self.elb_client.get_waiter("load_balancers_deleted")
-            log.info("Waiting for load balancer to be deleted...")
-            waiter.wait(Names=[load_balancer_name])
         except ClientError as err:
             error_code = err.response["Error"]["Code"]
             log.error(
