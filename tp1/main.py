@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
-AWS_ACCESS_KEY_ID='ASIAQHVV6K7D6HWZGYKA'
-AWS_SECRET_ACCESS_KEY='40+oaERpJpgHeDRF22SmQfKDPefCBxN9NcWRPUpy'
-AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEHgaCXVzLXdlc3QtMiJHMEUCICLIQYsxVHDRS0TmbsMQR3ZnYwx1bqZUweVFvocVBvS9AiEA0vetwPVKifw5KysMNP/GN/ADceJX/0GQDgFIcbWgVqcqswIIsf//////////ARAAGgwwMTY0ODc3MDA0MjMiDPCpjG+drO0/fklT9SqHArRzRavAB/CvdVLnOGjbc5fgHclonCM/UhOvOVRZijXVZrkZOzhXAt3W/OKrBxLYJH3H8+hhLQN3Aw2SfRdAOz2EpmmWgyys/kb15ch8e5CYrZ9W5yj+nCqYI6lvUal7ZPqDyHkBLsIifOIrqmGMYTNJchPkW2/zb6w5PM+oPV1yEg8ytKucKoTIAhkVxS3ZYcaAzplj4Q6ylCmyeHx1BIxPBkflW1h2Y4iLY15A+q8KGWnCroblNEXqIvQStlQqHJAr63IdpZ5FMP7lHcMT6eG77ULKSxS+KTX+N8VNQDE6egFyG2C/d82XV0HN7sVEJnDJlXdeH+wb9kGnosEanDIo9fKvrD3wMLrOwrcGOp0BcErOBM5iuDaRPBLQbbkh+YqgIRpmt0LbyuCZhHoYwAA4eShBKrrmaZlL41IhOe0KoVV2kGayQN3RdAJ+RVAL9gfgWBz+Pw227SuJqqQS0gqsUn4crrONC2mGmDsR8RpCpFS/bisY094tR/HpA5jqyf/AhlTscV5HD9IEsxEVZ2+JGChBtfbO0cmoL8GpUJeI5ojAOtew736nbEeC8Q=='
+AWS_ACCESS_KEY_ID='ASIAYGD4W2IMQHUEYCRK'
+AWS_SECRET_ACCESS_KEY='XSyAXspJHTKZFbZ6eub2bRUz0S8kH0DyoWbbR26M'
+AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEHoaCXVzLXdlc3QtMiJHMEUCIQC5+iY2eqWhQ/M60ylTfgHuijFaESZEq84Pc/bmhTcy9AIgRRsM7qKehMmTc1gY+MSgnPtvqry2oC94UvzfET9Xa7IquwIIs///////////ARAAGgw1NjI5MDIyNTgyMDEiDHK0lkLELvyR36F75CqPAqLDIS9GPigKP/AMt8UolV6RrfO1Hgu9Lg8Sy898JLDEFYtYK5AvtoCdqgsWiPKXYlut/3i/y0ksjALfqapPTjEuq3vRnwrxDlefNox1E6NodHWMGf3gNkxtzJTA1/x/dQmhk0X21oEHQB9uo3adeokGGIqaUD/eg+7ttTtiOSjzTVzYXfzFPKmvgls3wkETxp4S7li3OHEnrx/IrYmXTHDog458DQyPJWEWiLCCbOtI33DwYkQP63sCQhwcpwtjqcFLN5qChmNElUBw+xrr0CNTioauq8fN0E+AQF/PcAyxiQAzFkW9PSMkiI4KZe+859VxLo7up0u4jJfbmU+PWeX66VyETkgnubiQO3gUUQ4w653DtwY6nQHYkWkH9szeXg4mefChJjiGlDpuxzzpybyavHfvA7/uxhDHAmxfCly0coVyB30xquJBIFxM2JaiXMXjLeyAHN2fVx6Kb34aHBTU2LBeihMFQH0H/ktx0ph6x6++ZtfZ+gqBqhIHqZbui4ka6sfh4OdfiafGXg83fgkc7O0FutaX2PQHoMHlFkKt6pP5/AI2q7h2HtX9HE+p7/Hgwv6M'
 
 # TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
-INSTANCE_COUNT_1 = 1 # 10 requis
-INSTANCE_COUNT_2 = 1 # 10 requis
+INSTANCE_COUNT_1 = 2 # 10 requis
+INSTANCE_COUNT_2 = 2 # 10 requis
 INSTANCE_TYPE_1 = 't2.micro'
 INSTANCE_TYPE_2 = 't2.large'
 
@@ -104,22 +104,6 @@ class EC2InstanceScenario:
             bar()
 
         console.print(f"- **Private Key Saved to**: {self.key_wrapper.key_file_path}\n")
-
-        # List key pairs (simulated) and show a progress bar.
-        list_keys = True
-        if list_keys:
-            console.print("- Listing your key pairs...")
-            start_time = time.time()
-            with alive_bar(100, title="Listing Key Pairs") as bar:
-                while time.time() - start_time < 2:
-                    time.sleep(0.2)
-                    bar(10)
-                self.key_wrapper.list(5)
-                if time.time() - start_time > 2:
-                    console.print(
-                        "Taking longer than expected! Please wait...",
-                        style="bold yellow",
-                    )
 
     def create_security_group(self, name=f"MySecurityGroup-{uuid.uuid4().hex[:8]}", ) -> None:
         """
@@ -208,22 +192,34 @@ class EC2InstanceScenario:
             response = self.sg_wrapper.authorize_ingress(current_ip_address, elb_ip_permissions)
                                           
 
-    def create_instance(self, instance_type) -> None:
+    def create_instance(self, inst_type_choice) -> None:
         """
         Launches an EC2 instance using an specific AMI and the created key pair
         and security group. Displays instance details and SSH connection information.
         """
-        # Retrieve Amazon Linux 2 AMIs from SSM.
-        # ami_paginator = self.ssm_client.get_paginator("get_parameters_by_path")
-        # ami_options = []
-        # for page in ami_paginator.paginate(Path="/aws/service/ami-amazon-linux-latest"):
-        #     ami_options += page["Parameters"]
-        # amzn2_images = self.inst_wrapper.get_images(
-        #     [opt["Value"] for opt in ami_options if "amzn2" in opt["Name"]]
-        # )
+        console.print("Creating an instance now...")
+
+        with alive_bar(1, title="Creating Instances") as bar:
+            self.inst_wrapper.create(
+                INSTANCE_AMI,
+                inst_type_choice["InstanceType"],
+                self.key_wrapper.key_pair["KeyName"],
+                [self.sg_wrapper.security_group],
+            )
+            time.sleep(1)
+            bar()     
+
+        self.inst_wrapper.display()
+
+        self._display_ssh_info()
+
+    def create_instances_group(self, count, instance_type) -> None:
+        """
+        Create multiple instances at once
+        """
         console.print("\n**Step 3: Launch Your Instance**", style="bold cyan")
         console.print(
-            "Let's create an instance from a specified AMI: {}".format(INSTANCE_AMI)
+            "Let's create {} instance from a specified AMI: {} and instance type : {}".format(count, INSTANCE_AMI, instance_type)
         )
 
         # Display instance types compatible with the specified AMI
@@ -240,39 +236,10 @@ class EC2InstanceScenario:
         if inst_type_choice is None:
             console.print(f"- Requested instance type '{instance_type}' not found.")
             return
-
-        console.print(
-            f"- Selected instance type: {inst_type_choice['InstanceType']}\n"
-        )
-
-        console.print("Creating your instance and waiting for it to start...")
-        with alive_bar(1, title="Creating Instance") as bar:
-            self.inst_wrapper.create(
-                INSTANCE_AMI,
-                inst_type_choice["InstanceType"],
-                self.key_wrapper.key_pair["KeyName"],
-                [self.sg_wrapper.security_group],
-            )
-            time.sleep(1)
-            bar()
-
-        console.print(f"**Success! Your instance is ready:**\n", style="bold green")
-        self.inst_wrapper.display()
-
-        console.print(
-            "You can use SSH to oncnect to your instance. "
-            "If the connection attempt times out, you might have to manually update "
-            "the SSH ingress rule for your IP address in the AWS Management Console."
-        )
-        self._display_ssh_info()
-
-    def create_instances_group(self, count, instance_type) -> None:
-        """
-        Create multiple instances at once
-        """
         
         for i in range(count):
-            self.create_instance(instance_type)
+            self.create_instance(inst_type_choice)     
+
         
     def _display_ssh_info(self) -> None:
         """
@@ -445,12 +412,15 @@ class EC2InstanceScenario:
                 vpc_id=vpc_id,
                 target_type='instance'
             )
+
+            # Get targets with instance type t2.micro
+            type_1_instances = [instance for instance in self.inst_wrapper.instances if instance["InstanceType"] == INSTANCE_TYPE_1]
+            type_2_instances = [instance for instance in self.inst_wrapper.instances if instance["InstanceType"] == INSTANCE_TYPE_2]
+
             # Register the instance with the target group
             self.elbv2_client.register_targets(
                 TargetGroupArn=target_group_1['TargetGroupArn'],
-                Targets=[{'Id': self.inst_wrapper.instances[0]['InstanceId'],
-                            'Port': 8000
-                            }]
+                Targets=[{'Id': i['InstanceId'], 'Port': 8000} for i in type_1_instances]
                 )
             
             target_group_2 = self.create_target_group(
@@ -464,9 +434,7 @@ class EC2InstanceScenario:
             # Register the instance with the target group
             self.elbv2_client.register_targets(
                 TargetGroupArn=target_group_2['TargetGroupArn'],
-                Targets=[{'Id': self.inst_wrapper.instances[1]['InstanceId'],
-                            'Port': 8000
-                            }]
+                Targets=[{'Id': i['InstanceId'], 'Port': 8000} for i in type_2_instances]
                 )
 
             # Obtain the ARN of the load balancer
@@ -586,12 +554,12 @@ class EC2InstanceScenario:
         console.print("\n**Step 6: Clean Up Resources**", style="bold cyan")
         console.print("Cleaning up resources:")
         
-        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
+        """ console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer["LoadBalancerName"]}")
         if self.elb_wrapper.load_balancer:
             with alive_bar(1, title="Deleting Load Balancer") as bar:
                 self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])
                 time.sleep(0.4)
-                bar()
+                bar() """
             
         console.print("\t- **Deleted Load Balancer**")
         
