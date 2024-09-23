@@ -38,8 +38,8 @@ if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not AWS_SESSION_TOKEN:
     exit(1)
 
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
-INSTANCE_COUNT_1 = 4 # 10 requis
-INSTANCE_COUNT_2 = 5 # 10 requis
+INSTANCE_COUNT_1 = 5 #t2.micro
+INSTANCE_COUNT_2 = 4 #t2.large
 INSTANCE_TYPE_1 = 't2.micro'
 INSTANCE_TYPE_2 = 't2.large'
 
@@ -49,7 +49,6 @@ os.environ['INSTANCE_COUNT_2'] = str(INSTANCE_COUNT_2)
 os.environ['INSTANCE_TYPE_1'] = INSTANCE_TYPE_1
 os.environ['INSTANCE_TYPE_2'] = INSTANCE_TYPE_2
 
-# TODO: déplacer les var ci-bas dans le fichier de configuration ~/.aws/config et enlever leur référence dans le code
 os.environ['AWS_DEFAULT_REGION'] = "us-east-1"
 os.environ['AWS_ACCESS_KEY_ID'] = AWS_ACCESS_KEY_ID
 os.environ['AWS_SECRET_ACCESS_KEY'] = AWS_SECRET_ACCESS_KEY
