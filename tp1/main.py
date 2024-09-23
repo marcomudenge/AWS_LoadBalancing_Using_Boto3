@@ -23,15 +23,23 @@ import benchmark as bm
 logger = logging.getLogger(__name__)
 console = Console()
 
+# Read AWS credentials from environment file AWSaccess.txt
+with open("AWS_access.txt", "r") as file:
+    AWS_ACCESS_KEY_ID = file.readline().split("aws_access_key_id=")[1].strip()
+    AWS_SECRET_ACCESS_KEY = file.readline().split("aws_secret_access_key=")[1].strip()
+    AWS_SESSION_TOKEN = file.readline().split("aws_session_token=")[1].strip()
 
-AWS_ACCESS_KEY_ID='ASIAQHVV6K7DRVWEFR3G'
-AWS_SECRET_ACCESS_KEY='Ec4c7vxB0CjIJ8MlXpozEBFclSA3I6KTBSl8z2Pw'
-AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEIj//////////wEaCXVzLXdlc3QtMiJGMEQCIBKjft3tSQQDrXuxQOL2JNOJe+cWbqpvTeisp4v0tgZeAiApUndsjteN3unARCeF++NAOFGJdhGbdMSTczkQJ8tXySqzAgjB//////////8BEAAaDDAxNjQ4NzcwMDQyMyIMkm8o5iqYxHtIwTxKKocCWLS8euWFIypdpHQzPvN4xsBy9YVbOuhUQ8Upr3HA/fIjJlxw6g8ouEioIRDXf4p3wB3Mva7r65swADnmJqf1/AWQnH4JLqyLzs0/8+zBF7fJBw0hIseuOCWaGaUlVXgYcvl6Dk6rni49eV8JDAloRgVe1sb+D07YMLeskFX0dSaenXvDWPoEwdOrBCKPbLHUalNJlH7IjhDo1w4/AOvDomzudyHOYTLa+lmXcDqcoHQ1imLbypibGzV2/uvE69Ap3Tv0iRkCjdA6OBOrcLv9AlkhGvWkRjwkq/qUwfOdbVZCQsi5+jaspKtb//b/5QGRHtvtWoGEBdjEvt7IrMcMQjyfEjC81T4wiajGtwY6ngGG7Xtit0r3GPQqZzqU4s2OivMbNHU1AFUcba8zxpz5RblB2YPT4T0E59pEhKNVs4wHVKzDVCPVPRl7UkAmUa7nm/l8OQmcF9C1nEEZOd7/UeNJYWv3Jm1UL7KCEGByQtgIrEXKeGKFUe9eLSl2p7it2nRaVV9/8dfxuRBRHDhkYKt6/lR9qBShPiCOUVNvM8nJK4rMgKWl5nsFZKFr5g=='
+# Verify that the AWS credentials are set
+if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not AWS_SESSION_TOKEN:
+    console.print(
+        "AWS credentials not found. Please ensure that the 'AWSaccess.txt' file contains the necessary credentials.",
+        style="bold red",
+    )
+    exit(1)
 
-# TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
-INSTANCE_COUNT_1 = 2 # 10 requis
-INSTANCE_COUNT_2 = 2 # 10 requis
+INSTANCE_COUNT_1 = 4 # 10 requis
+INSTANCE_COUNT_2 = 5 # 10 requis
 INSTANCE_TYPE_1 = 't2.micro'
 INSTANCE_TYPE_2 = 't2.large'
 
