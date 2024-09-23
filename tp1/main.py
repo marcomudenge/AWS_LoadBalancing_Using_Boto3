@@ -5,7 +5,7 @@ import urllib.request
 import uuid
 import os
 import paramiko
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 
 import boto3
@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
-AWS_ACCESS_KEY_ID='ASIAYGD4W2IMQHUEYCRK'
-AWS_SECRET_ACCESS_KEY='XSyAXspJHTKZFbZ6eub2bRUz0S8kH0DyoWbbR26M'
-AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEHoaCXVzLXdlc3QtMiJHMEUCIQC5+iY2eqWhQ/M60ylTfgHuijFaESZEq84Pc/bmhTcy9AIgRRsM7qKehMmTc1gY+MSgnPtvqry2oC94UvzfET9Xa7IquwIIs///////////ARAAGgw1NjI5MDIyNTgyMDEiDHK0lkLELvyR36F75CqPAqLDIS9GPigKP/AMt8UolV6RrfO1Hgu9Lg8Sy898JLDEFYtYK5AvtoCdqgsWiPKXYlut/3i/y0ksjALfqapPTjEuq3vRnwrxDlefNox1E6NodHWMGf3gNkxtzJTA1/x/dQmhk0X21oEHQB9uo3adeokGGIqaUD/eg+7ttTtiOSjzTVzYXfzFPKmvgls3wkETxp4S7li3OHEnrx/IrYmXTHDog458DQyPJWEWiLCCbOtI33DwYkQP63sCQhwcpwtjqcFLN5qChmNElUBw+xrr0CNTioauq8fN0E+AQF/PcAyxiQAzFkW9PSMkiI4KZe+859VxLo7up0u4jJfbmU+PWeX66VyETkgnubiQO3gUUQ4w653DtwY6nQHYkWkH9szeXg4mefChJjiGlDpuxzzpybyavHfvA7/uxhDHAmxfCly0coVyB30xquJBIFxM2JaiXMXjLeyAHN2fVx6Kb34aHBTU2LBeihMFQH0H/ktx0ph6x6++ZtfZ+gqBqhIHqZbui4ka6sfh4OdfiafGXg83fgkc7O0FutaX2PQHoMHlFkKt6pP5/AI2q7h2HtX9HE+p7/Hgwv6M'
+AWS_ACCESS_KEY_ID='ASIAQHVV6K7DRVWEFR3G'
+AWS_SECRET_ACCESS_KEY='Ec4c7vxB0CjIJ8MlXpozEBFclSA3I6KTBSl8z2Pw'
+AWS_SESSION_TOKEN='IQoJb3JpZ2luX2VjEIj//////////wEaCXVzLXdlc3QtMiJGMEQCIBKjft3tSQQDrXuxQOL2JNOJe+cWbqpvTeisp4v0tgZeAiApUndsjteN3unARCeF++NAOFGJdhGbdMSTczkQJ8tXySqzAgjB//////////8BEAAaDDAxNjQ4NzcwMDQyMyIMkm8o5iqYxHtIwTxKKocCWLS8euWFIypdpHQzPvN4xsBy9YVbOuhUQ8Upr3HA/fIjJlxw6g8ouEioIRDXf4p3wB3Mva7r65swADnmJqf1/AWQnH4JLqyLzs0/8+zBF7fJBw0hIseuOCWaGaUlVXgYcvl6Dk6rni49eV8JDAloRgVe1sb+D07YMLeskFX0dSaenXvDWPoEwdOrBCKPbLHUalNJlH7IjhDo1w4/AOvDomzudyHOYTLa+lmXcDqcoHQ1imLbypibGzV2/uvE69Ap3Tv0iRkCjdA6OBOrcLv9AlkhGvWkRjwkq/qUwfOdbVZCQsi5+jaspKtb//b/5QGRHtvtWoGEBdjEvt7IrMcMQjyfEjC81T4wiajGtwY6ngGG7Xtit0r3GPQqZzqU4s2OivMbNHU1AFUcba8zxpz5RblB2YPT4T0E59pEhKNVs4wHVKzDVCPVPRl7UkAmUa7nm/l8OQmcF9C1nEEZOd7/UeNJYWv3Jm1UL7KCEGByQtgIrEXKeGKFUe9eLSl2p7it2nRaVV9/8dfxuRBRHDhkYKt6/lR9qBShPiCOUVNvM8nJK4rMgKWl5nsFZKFr5g=='
 
 # TODO: S'assurer que les intances sont bien configurées
 INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
@@ -346,8 +346,9 @@ class EC2InstanceScenario:
         Monitor the performance of the EC2 instances in the cluster by retrieving
         CPU utilization metrics from CloudWatch.
         """
-        start_time = datetime.now() - timedelta(minutes=20)
-        end_time = datetime.now()
+        # Get the start and end times for the metric statistics in UTC
+        start_time = datetime.now(tz=timezone.utc) - timedelta(minutes=5)
+        end_time = datetime.now(tz=timezone.utc)
         print(f"Performance Metrics for {instance_type} instances:")
         data = []
         for instance_id in instance_ids:
@@ -356,16 +357,18 @@ class EC2InstanceScenario:
             stats = self.cloudwatch_wrapper.get_metric_statistics(
                 namespace='AWS/EC2',
                 name='CPUUtilization',
+                instance_id=instance_id,
                 start=start_time,
                 end=end_time,
                 period=60,  # intervals
-                stat_types=['Average']
+                stat_types=['Average'],
+                unit='Percent',
             )
 
             # get the average CPU utilization
             instance_data["instance_id"] = instance_id
-            instance_data["Average"] = sum([datapoint['Average'] for datapoint in stats['Datapoints']]) / len(stats['Datapoints'])
-            instance_data["Max"] = max([datapoint['Average'] for datapoint in stats['Datapoints']])
+            instance_data["Average"] = sum([stat['Average'] for stat in stats]) / len(stats) if len(stats) > 0 else 0
+            instance_data["Max"] = max([stat['Average'] for stat in stats]) if len(stats) > 0 else 0
             data.append(instance_data)
         
         # put all data in a pandas dataframe
@@ -649,7 +652,7 @@ if __name__ == "__main__":
         KeyPairWrapper.from_client(),
         SecurityGroupWrapper.from_client(),
         ElasticLoadBalancerWrapper(boto3.client("elbv2")),
-        CloudWatchWrapper(boto3.resource("cloudwatch")),
+        CloudWatchWrapper(boto3.client("cloudwatch")),
         boto3.client("ssm"),
         boto3.client("elbv2"),
         remote_exec=False

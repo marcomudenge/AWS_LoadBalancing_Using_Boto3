@@ -14,7 +14,7 @@ class CloudWatchWrapper:
         """
         self.cloudwatch_resource = cloudwatch_resource
 
-    def get_metric_statistics(self, namespace, name, start, end, period, stat_types):
+    def get_metric_statistics(self, namespace, name, instance_id, start, end, period, stat_types, unit):
         """
         Gets statistics for a metric within a specified time span. Metrics are grouped
         into the specified period.
@@ -33,15 +33,21 @@ class CloudWatchWrapper:
         :return: The retrieved statistics for the metric.
         """
         try:
-            metric = self.cloudwatch_resource.Metric(namespace, name)
-            stats = metric.get_statistics(
-                StartTime=start, EndTime=end, Period=period, Statistics=stat_types
+            response = self.cloudwatch_resource.get_metric_statistics(
+                Namespace=namespace,
+                MetricName=name,
+                Dimensions=[{"Name": "InstanceId", "Value": instance_id}],
+                StartTime=start, 
+                EndTime=end, 
+                Period=period,
+                Statistics=stat_types,
+                Unit=unit
             )
             logger.info(
-                "Got %s statistics for %s.", len(stats["Datapoints"]), stats["Label"]
+                "Got %s statistics for %s.", len(response["Datapoints"]), response["Label"]
             )
         except ClientError:
             logger.exception("Couldn't get statistics for %s.%s.", namespace, name)
             raise
         else:
-            return stats
+            return response["Datapoints"]
