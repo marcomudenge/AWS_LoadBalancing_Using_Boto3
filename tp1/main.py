@@ -106,10 +106,9 @@ class EC2InstanceScenario:
         key_name = f"MyUniqueKeyPair-{uuid.uuid4().hex[:8]}"
         console.print(f"- **Key Pair Name**: {key_name}")
 
-        # Create the key pair and simulate the process with a progress bar.
         with alive_bar(1, title="Creating Key Pair") as bar:
             self.key_wrapper.create(key_name)
-            time.sleep(0.4)  # Simulate the delay in key creation
+            time.sleep(0.4) 
             bar()
 
         console.print(f"- **Private Key Saved to**: {self.key_wrapper.key_file_path}\n")
@@ -121,7 +120,6 @@ class EC2InstanceScenario:
         """
         console.print("**Step 2: Create a Security Group : {name}**", style="bold cyan")
 
-        # Create the security group and simulate the process with a progress bar.
         with alive_bar(1, title="Creating Security Group") as bar:
             self.sg_wrapper.create(
                 name, "Instances security"
@@ -131,7 +129,6 @@ class EC2InstanceScenario:
 
         console.print(f"- **Security Group ID**: {self.sg_wrapper.security_group}\n")
 
-        # Get the current public IP to set up SSH access.
         ip_response = urllib.request.urlopen("http://checkip.amazonaws.com")
         current_ip_address = ip_response.read().decode("utf-8").strip()
         console.print(
@@ -140,7 +137,6 @@ class EC2InstanceScenario:
         console.print(f"- **Your Public IP Address**: {current_ip_address}")
         console.print("- Automatically adding SSH rule...")
 
-        # Update security group rules to allow SSH and simulate with a progress bar.
         with alive_bar(1, title="Updating Security Group Rules") as bar:
             response = self.sg_wrapper.authorize_ingress(current_ip_address)
             time.sleep(0.4)
@@ -153,53 +149,7 @@ class EC2InstanceScenario:
                 )
             bar()
 
-        self.sg_wrapper.describe(self.sg_wrapper.security_group)
-
-    def creat_security_groups(self) -> None:
-        """
-        Creates a security group for the EC2 instance and another security group for the load balancer.
-        """
-
-        console.print("\n**Step 2: Create Security Groups**", style="bold cyan")
-
-        # Create a security group for the EC2 instance
-        console.print("Creating a security group for the EC2 instance...")
-        instance_sg_name = f"Instance_SG-{uuid.uuid4().hex[:8]}"
-        instance_sg_id = self.sg_wrapper.create(instance_sg_name, "Security group for EC2 instances")
-
-        # Create a security group for the load balancer
-        console.print("Creating a security group for the load balancer...")
-        lb_sg_name = f"LoadBlancer_SG-{uuid.uuid4().hex[:8]}"
-        lb_sg_id = self.sg_wrapper.create(lb_sg_name, "Security group for the load balancer")
-
-        # Get the current public IP to set up SSH access.
-        ip_response = urllib.request.urlopen("http://checkip.amazonaws.com")
-        current_ip_address = ip_response.read().decode("utf-8").strip()
-        console.print(
-            "Add a rule to allow SSH only from your current IP address to the security group for the load balancer."
-        )
-
-        # Update security group rules to allow SSH and simulate with a progress bar.
-        with alive_bar(1, title="Updating Security Group Rules") as bar:
-            elb_ip_permissions = [
-                    {
-                        # SSH ingress open to only the specified IP address.
-                        "IpProtocol": "tcp",
-                        "FromPort": 80,
-                        "ToPort": 80,
-                        "IpRanges": [{"CidrIp": f"{ip_response}/32"}],
-                    },
-                    {
-                    # Web server ingress open to the specified IP address.
-                    "IpProtocol": "tcp",
-                    "FromPort": 443,
-                    "ToPort": 443,
-                    "IpRanges": [{"CidrIp": f"{ip_response}/32"}],
-                    }
-                ]
-            
-            response = self.sg_wrapper.authorize_ingress(current_ip_address, elb_ip_permissions)
-                                          
+        self.sg_wrapper.describe(self.sg_wrapper.security_group)                                      
 
     def create_instance(self, inst_type_choice) -> None:
         """
@@ -231,10 +181,8 @@ class EC2InstanceScenario:
             "Let's create {} instance from a specified AMI: {} and instance type : {}".format(count, INSTANCE_AMI, instance_type)
         )
 
-        # Display instance types compatible with the specified AMI
-        inst_types = self.inst_wrapper.get_instance_types("x86_64")  # Adjust architecture as needed
+        inst_types = self.inst_wrapper.get_instance_types("x86_64")
 
-        # Check if the requested instance type is available.
         inst_type_choice = None
         for inst_type in inst_types:
             if inst_type["InstanceType"] == instance_type:
@@ -305,7 +253,7 @@ class EC2InstanceScenario:
         public_ip = self.get_public_ip(instance_id)
         scp_command = "scp -i " + self.key_wrapper.key_file_path + " -o StrictHostKeyChecking=no -r ./FastAPI ec2-user@" + public_ip + ":~/"
         print(scp_command)
-        os.system(scp_command) #TODO: I wasn't able to make it work with sftp paramiko, but should be done with ssm too
+        os.system(scp_command)
         deploy_flask_commands = [
             "sudo yum update && sudo yum upgrade -y",
             "sudo yum install python3 python3-pip -y",
@@ -314,23 +262,14 @@ class EC2InstanceScenario:
             f"INSTANCE_ID={instance_id} python3 FastAPI/main.py > output.log 2>&1 &"
         ]
         public_ip = self.get_public_ip(instance_id)
-        ssh = paramiko.SSHClient() #TODO: Check if possible to use ssm client instead (seems to be blocked)
+        ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        # local_file_path = "./FastAPI/main.py"
-        # remote_file_path = ""
         try:
             ssh.connect(
                 hostname=public_ip, 
                 username="ec2-user",
                 key_filename=self.key_wrapper.key_file_path
             )
-            # send ./FastAPI/main.py to the instance
-            
-            # sftp = ssh.open_sftp()
-            # print(f"Uploading {local_file_path} to {remote_file_path}")
-            # sftp.put(local_file_path, remote_file_path)
-            # print("File upload complete")
-            # sftp.close()
             
             for command in deploy_flask_commands:
                 print(f"Executing: {command}")
@@ -353,14 +292,12 @@ class EC2InstanceScenario:
         Monitor the performance of the EC2 instances in the cluster by retrieving
         CPU utilization metrics from CloudWatch.
         """
-        # Get the start and end times for the metric statistics in UTC
         start_time = datetime.now(tz=timezone.utc) - timedelta(minutes=10)
         end_time = datetime.now(tz=timezone.utc)
         print("Performance Metrics:")
         data = []
         for instance_id in instance_ids:
             instance_data = {}
-            # Get CPU Utilization statistics
             stats = self.cloudwatch_wrapper.get_metric_statistics(
                 namespace='AWS/EC2',
                 name='CPUUtilization',
@@ -381,9 +318,7 @@ class EC2InstanceScenario:
            
             data.append(instance_data)
         
-        # put all data in a pandas dataframe
         df = pd.DataFrame(data)
-        # export the dataframe to a csv file
         df.to_csv('performance_metrics.csv', index=False)
 
     def create_target_group(self, name, protocol, port, vpc_id) -> dict:
@@ -403,20 +338,17 @@ class EC2InstanceScenario:
         """
         Creates a load balancer that distributes incoming traffic across multiple targets.
         """
-        # Get VPC
         vpc_id = self.inst_wrapper.instances[0]["VpcId"]
 
         console.print("\n**Step 5: Create a Load Balancer**", style="bold cyan")
         console.print("Creating a load balancer to distribute incoming traffic...")
 
-        # Create a load balancer and simulate the process with a progress bar.
         with alive_bar(1, title="Creating Load Balancer") as bar:
             instance_availability_zones = [inst["Placement"]["AvailabilityZone"] for inst in self.inst_wrapper.instances]
             instance_availability_zones.extend(['us-east-1a', 'us-east-1b'])
             instance_availability_zones = list(set(instance_availability_zones))
             subnets = self.get_subnets(vpc_id, zones=instance_availability_zones)
             
-            # Get VPC security group
             security_group_id = self.sg_wrapper.security_group
 
             load_balancer_name = f"LoadBalancer-{uuid.uuid4().hex[:8]}"
@@ -431,11 +363,9 @@ class EC2InstanceScenario:
                 vpc_id=vpc_id,
             )
 
-            # Get targets with instance type t2.micro
             type_1_instances = [instance for instance in self.inst_wrapper.instances if instance["InstanceType"] == INSTANCE_TYPE_1]
             type_2_instances = [instance for instance in self.inst_wrapper.instances if instance["InstanceType"] == INSTANCE_TYPE_2]
 
-            # Register the instance with the target group
             self.elbv2_client.register_targets(
                 TargetGroupArn=target_group_1['TargetGroupArn'],
                 Targets=[{'Id': i['InstanceId'], 'Port': 8000} for i in type_1_instances]
@@ -448,16 +378,13 @@ class EC2InstanceScenario:
                 vpc_id=vpc_id,
                 )
             
-            # Register the instance with the target group
             self.elbv2_client.register_targets(
                 TargetGroupArn=target_group_2['TargetGroupArn'],
                 Targets=[{'Id': i['InstanceId'], 'Port': 8000} for i in type_2_instances]
                 )
 
-            # Obtain the ARN of the load balancer
             lb_arn = elb.get('LoadBalancerArn')
 
-            # Create a listener for the load balancer
             listener = self.elbv2_client.create_listener(
                 LoadBalancerArn=lb_arn,
                 Protocol='HTTP',
@@ -471,29 +398,36 @@ class EC2InstanceScenario:
                     }
                 ],
             )
+
             self.elb_wrapper.listener = listener['Listeners'][0]
 
             listener_arn = listener['Listeners'][0].get('ListenerArn')
             if listener_arn is None:
                 raise RuntimeError('Listener ARN not found')
+            
             self.elbv2_client.create_rule(
                 ListenerArn=listener_arn,
                 Conditions=[
-                    {'Field': 'path-pattern', 'Values': ['/cluster1', '/cluster1/*']},
+                    {'Field': 'path-pattern', 
+                     'Values': ['/cluster1', '/cluster1/*']},
                 ],
                 Priority=1,
                 Actions=[
-                    {'Type': 'forward', 'TargetGroupArn': target_group_1['TargetGroupArn']},
+                    {'Type': 'forward', 
+                     'TargetGroupArn': target_group_1['TargetGroupArn']},
                 ],
             )
+
             self.elbv2_client.create_rule(
                 ListenerArn=listener_arn,
                 Conditions=[
-                    {'Field': 'path-pattern', 'Values': ['/cluster2', '/cluster2/*']},
+                    {'Field': 'path-pattern', 
+                     'Values': ['/cluster2', '/cluster2/*']},
                 ],
                 Priority=2,
                 Actions=[
-                    {'Type': 'forward', 'TargetGroupArn': target_group_2['TargetGroupArn']},
+                    {'Type': 'forward',
+                     'TargetGroupArn': target_group_2['TargetGroupArn']},
                 ],
             )
             
