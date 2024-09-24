@@ -375,8 +375,10 @@ class EC2InstanceScenario:
             instance_data['InstanceID'] = instance_id
             instance_data['data_points'] = []
             for data_point in stats:
+                timestamp = data_point['Timestamp'].strftime('%Y-%m-%d %H:%M:%S') 
                 instance_data['data_points'].append({
-                    data_point['Timestamp']: data_point['Average']
+                    # Convert the timestamp to a string
+                    timestamp: data_point['Average']
                 })
            
             data.append(instance_data)
