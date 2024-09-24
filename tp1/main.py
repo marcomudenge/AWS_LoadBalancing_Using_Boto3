@@ -56,7 +56,7 @@ os.environ['AWS_SESSION_TOKEN'] = AWS_SESSION_TOKEN
 
 console = Console()
 
-class EC2InstanceScenario:
+class ELBScenario:
     """
     A scenario that demonstrates how to use Boto3 to manage Amazon EC2 resources.
     Covers creating a key pair, security group, launching an instance, associating
@@ -75,7 +75,7 @@ class EC2InstanceScenario:
         remote_exec: bool = False
     ):
         """
-        Initializes the EC2InstanceScenario with the necessary AWS service wrappers.
+        Initializes the ELBScenario with the necessary AWS service wrappers.
 
         :param inst_wrapper: Wrapper for EC2 instance operations.
         :param key_wrapper: Wrapper for key pair operations.
@@ -513,8 +513,8 @@ class EC2InstanceScenario:
                 time.sleep(0.4)
                 bar()
         
-        console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer['LoadBalancerName']}")
         if self.elb_wrapper.load_balancer:
+            console.print(f"- **Load Balancer**: {self.elb_wrapper.load_balancer['LoadBalancerName']}")
             with alive_bar(1, title="Deleting Load Balancer") as bar:
                 self.elb_wrapper.delete_load_balancer(self.elb_wrapper.load_balancer["LoadBalancerName"])
                 time.sleep(0.4)
@@ -591,7 +591,7 @@ class EC2InstanceScenario:
 
 
 if __name__ == "__main__":
-    scenario = EC2InstanceScenario(
+    scenario = ELBScenario(
         EC2InstanceWrapper.from_client(),
         KeyPairWrapper.from_client(),
         SecurityGroupWrapper.from_client(),
