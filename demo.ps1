@@ -4,7 +4,7 @@ if (!(Test-Path -Path "requirements.txt")) {
     exit 1
 }
 
-if (!(Test-Path -Path "tp1/AWS_access.txt")) {
+if (!(Test-Path -Path "source/AWS_access.txt")) {
     Write-Host "requirements.txt not found!"
     exit 1
 }
@@ -21,6 +21,6 @@ pip install -r requirements.txt
 
 Write-Host "Virtual environment set up and packages installed successfully."
 
-cd tp1
+cd source
 python main.py
 deactivate
