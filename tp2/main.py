@@ -36,8 +36,9 @@ if not AWS_ACCESS_KEY_ID or not AWS_SECRET_ACCESS_KEY or not AWS_SESSION_TOKEN:
     )
     exit(1)
 
-INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
+#INSTANCE_AMI = 'ami-0e54eba7c51c234f6' # Amazon Linux 2 AMI
 #INSTANCE_AMI = 'ami-0866a3c8686eaeeba' # Ubuntu Server 24.04 LTS (HVM), SSD Volume Type
+INSTANCE_AMI = 'ami-0866a3c8686eaeeba' # Ubuntu Server 24.04 LTS (HVM), SSD Volume Type
 INSTANCE_COUNT_1 = 1 #t2.micro
 INSTANCE_TYPE_1 = 't2.large'
 
@@ -243,27 +244,41 @@ class MapReduceScenario:
         """
         console.print(f"\n**Deploy FastAPI Application on instance {instance_id}**", style="bold cyan")
         public_ip = self.get_public_ip(instance_id)
-        scp_command = "scp -i " + self.key_wrapper.key_file_path + " -o StrictHostKeyChecking=no -r ./FastAPI ec2-user@" + public_ip + ":~/"
+
+        # Set the permission 400 to key_file_path
+        os.chmod(self.key_wrapper.key_file_path, 0o400)
+        print(f"Key file path: {self.key_wrapper.key_file_path}")
+
+        # Set the permission 400 to key_file_dir
+        os.chmod(os.path.dirname(self.key_wrapper.key_file_path), 0o700)
+
+        #scp_command = "scp -i " + self.key_wrapper.key_file_path + " -o StrictHostKeyChecking=no -r ./FastAPI ec2-user@" + public_ip + ":~/"
+        scp_command = "scp -i " + self.key_wrapper.key_file_path + " -o StrictHostKeyChecking=no -r ./FastAPI ubuntu@ec2-" + public_ip.replace('.', '-') + ".compute-1.amazonaws.com:~/"
+
         print(scp_command)
         os.system(scp_command)
         deploy_flask_commands = [
-            "sudo yum update && sudo yum upgrade -y",
-            "sudo yum install python3 python3-pip -y",
-            "sudo apt install default-jdk",
-            "java -version",
+            "sudo apt update && sudo apt upgrade -y",
+            "sudo apt install python3 -y",
+            "python3 --version",
+            "sudo apt install default-jre -y",
+            "java --version",
             "wget https://archive.apache.org/dist/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz",
+            # TODO: Add interactive checksum validation if there's enough time
             "tar -xvf hadoop-3.3.6.tar.gz",
+            "sudo mv hadoop-3.3.1 /usr/local/hadoop",
+            'readlink -f /usr/bin/java | sed "s:bin/java::"', 
+            # Todo: Continue Hadoop/Spark installation https://www.digitalocean.com/community/tutorials/how-to-install-hadoop-in-stand-alone-mode-on-ubuntu-20-04
             "pip3 install Flask fastapi uvicorn",
             "chmod +x FastAPI/main.py",
             f"INSTANCE_ID={instance_id} python3 FastAPI/main.py > output.log 2>&1 &"
         ]
-        public_ip = self.get_public_ip(instance_id)
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
             ssh.connect(
                 hostname=public_ip, 
-                username="ec2-user",
+                username="ubuntu",
                 key_filename=self.key_wrapper.key_file_path
             )
             
